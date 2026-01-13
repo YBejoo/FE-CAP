@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import { Header } from "~/components/header";
 import {
   Badge,
@@ -114,6 +115,8 @@ export default function CPLPage() {
     setFormData({ nama_cpl: "", bobot: "", id_kurikulum: "K2024" });
   };
 
+  const navigate = useNavigate();
+
   return (
     <div>
       <Header
@@ -122,6 +125,14 @@ export default function CPLPage() {
       />
 
       <div className="p-6">
+        <Button
+          variant="outline"
+          onClick={() => navigate(-1)}
+          className="mb-4"
+        >
+          <Icons.ArrowLeft size={18} className="mr-2" />
+          Kembali
+        </Button>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div className="flex items-center gap-4">

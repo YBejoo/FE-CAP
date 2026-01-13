@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import { Header } from "~/components/header";
 import {
   Badge,
@@ -182,6 +183,8 @@ export default function LaporanPage() {
     }
   };
 
+  const navigate = useNavigate();
+
   return (
     <div>
       <Header
@@ -190,6 +193,14 @@ export default function LaporanPage() {
       />
 
       <div className="p-6 space-y-6">
+        <Button
+          variant="outline"
+          onClick={() => navigate(-1)}
+          className="mb-4"
+        >
+          <Icons.ArrowLeft size={18} className="mr-2" />
+          Kembali
+        </Button>
         {/* Summary Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card
