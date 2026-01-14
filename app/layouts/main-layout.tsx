@@ -1,13 +1,25 @@
 import { Outlet } from "react-router";
 import { Sidebar } from "~/components/sidebar";
+import { Header } from "~/components/header";
 
-export function MainLayout() {
+export default function MainLayout() {
   return (
-    <div className="min-h-screen bg-background">
+    <div style={{ display: "flex", minHeight: "100vh", backgroundColor: "#f8fafc" }}>
+      {/* Sidebar */}
       <Sidebar />
-      <main className="ml-64">
-        <Outlet />
-      </main>
+
+      {/* Main Content Area */}
+      <div style={{ flex: 1, marginLeft: "180px", display: "flex", flexDirection: "column" }}>
+        {/* Header - Fixed */}
+        <div style={{ position: "sticky", top: 0, zIndex: 40 }}>
+          <Header />
+        </div>
+
+        {/* Page Content */}
+        <main style={{ flex: 1, padding: "24px", backgroundColor: "#f8fafc" }}>
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

@@ -3,8 +3,12 @@ export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }
 export { Input } from "./input";
 export { Label } from "./label";
 export { Textarea } from "./textarea";
-export { Select } from "./select";
+export { Select, SelectRoot, SelectTrigger, SelectValue, SelectContent, SelectItem } from "./select";
 export { Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell, TableCaption } from "./table";
 export { Badge } from "./badge";
 export { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "./dialog";
 export { Icons } from "./icons";
+export { Tooltip } from "./tooltip";
+export { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel } from "./dropdown-menu";
+export { Avatar, AvatarImage, AvatarFallback } from "./avatar";
+export { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle } from "./sheet";

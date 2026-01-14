@@ -1,41 +1,55 @@
-import { Icons } from "~/components/ui/icons";
-import { Input } from "~/components/ui/input";
+import { useLocation } from "react-router";
+import { NAV_ITEMS } from "~/lib/constants";
 
 interface HeaderProps {
-  title: string;
-  description?: string;
+  title?: string;
 }
 
-export function Header({ title, description }: HeaderProps) {
-  return (
-    <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-16 items-center justify-between px-6">
-        <div>
-          <h1 className="text-xl font-semibold">{title}</h1>
-          {description && (
-            <p className="text-sm text-muted-foreground">{description}</p>
-          )}
-        </div>
-        
-        <div className="flex items-center gap-4">
-          {/* Search */}
-          <div className="relative">
-            <Icons.Search
-              size={18}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-            />
-            <Input
-              placeholder="Cari..."
-              className="w-64 pl-9"
-            />
-          </div>
+export function Header({ title }: HeaderProps) {
+  const location = useLocation();
 
-          {/* User Menu */}
-          <button className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-accent">
-            <Icons.Users size={18} />
-            <span>Admin</span>
-          </button>
-        </div>
+  // Generate breadcrumb from current path
+  const getBreadcrumb = () => {
+    const currentNav = NAV_ITEMS.find((item) => item.href === location.pathname);
+    const pageName = currentNav?.title || title || "Page";
+
+    if (location.pathname === "/") {
+      return ["Home"];
+    }
+
+    return ["Home", pageName];
+  };
+
+  const breadcrumb = getBreadcrumb();
+
+  return (
+    <header
+      style={{
+        height: "56px",
+        backgroundColor: "#ffffff",
+        borderBottom: "1px solid #e2e8f0",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "0 24px",
+        color: "#1e293b",
+      }}
+    >
+      {/* Breadcrumb */}
+      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        {breadcrumb.map((item, index) => (
+          <span key={index} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            {index > 0 && <span style={{ color: "#94a3b8" }}>/</span>}
+            <span style={{ color: index === breadcrumb.length - 1 ? "#1e293b" : "#64748b" }}>
+              {item}
+            </span>
+          </span>
+        ))}
+      </div>
+
+      {/* Profile */}
+      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        <span style={{ color: "#64748b", fontSize: "14px" }}>[ Profile ]</span>
       </div>
     </header>
   );

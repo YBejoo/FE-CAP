@@ -1,22 +1,19 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
-import { Header } from "~/components/header";
 import {
-  Badge,
-  Button,
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
   Icons,
+  Button,
+  Badge,
   Input,
-  Label,
-  Select,
+  SelectRoot as Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Table,
   TableBody,
   TableCell,
@@ -25,253 +22,306 @@ import {
   TableRow,
 } from "~/components/ui";
 import type { RPS } from "~/types";
+import { STATUS_RPS_OPTIONS } from "~/lib/constants";
 
-// Dummy data
-const mataKuliahOptions = [
-  { value: "MI101", label: "MI101 - Algoritma dan Pemrograman" },
-  { value: "MI102", label: "MI102 - Basis Data" },
-  { value: "MI103", label: "MI103 - Pemrograman Web" },
-  { value: "MI104", label: "MI104 - Jaringan Komputer" },
-  { value: "MI201", label: "MI201 - Pemrograman Berorientasi Objek" },
-  { value: "MI202", label: "MI202 - Analisis dan Perancangan Sistem" },
-  { value: "MI203", label: "MI203 - Pemrograman Mobile" },
+// Dummy RPS data
+const initialRPSList: RPS[] = [
+  {
+    id_rps: "1",
+    kode_mk: "INF101",
+    versi: 1,
+    tgl_penyusunan: new Date("2024-08-15"),
+    dosen_pengampu: "Dr. Andi Wijaya, M.Kom",
+    status: "Terbit",
+    mata_kuliah: {
+      kode_mk: "INF101",
+      nama_mk: "Pemrograman Dasar",
+      sks: 3,
+      semester: 1,
+      sifat: "Wajib",
+      id_kurikulum: "1",
+    },
+  },
+  {
+    id_rps: "2",
+    kode_mk: "INF102",
+    versi: 1,
+    tgl_penyusunan: new Date("2024-08-20"),
+    dosen_pengampu: "Ir. Budi Santoso, M.Kom",
+    status: "Terbit",
+    mata_kuliah: {
+      kode_mk: "INF102",
+      nama_mk: "Struktur Data",
+      sks: 3,
+      semester: 2,
+      sifat: "Wajib",
+      id_kurikulum: "1",
+    },
+  },
+  {
+    id_rps: "3",
+    kode_mk: "INF201",
+    versi: 2,
+    tgl_penyusunan: new Date("2024-09-01"),
+    dosen_pengampu: "Dr. Citra Dewi, M.T.",
+    status: "Menunggu Validasi",
+    mata_kuliah: {
+      kode_mk: "INF201",
+      nama_mk: "Basis Data",
+      sks: 3,
+      semester: 3,
+      sifat: "Wajib",
+      id_kurikulum: "1",
+    },
+  },
+  {
+    id_rps: "4",
+    kode_mk: "INF301",
+    versi: 1,
+    tgl_penyusunan: new Date("2024-09-10"),
+    dosen_pengampu: "Dian Pratama, S.Kom, M.T.",
+    status: "Draft",
+    mata_kuliah: {
+      kode_mk: "INF301",
+      nama_mk: "Pemrograman Web",
+      sks: 3,
+      semester: 4,
+      sifat: "Wajib",
+      id_kurikulum: "1",
+    },
+  },
+  {
+    id_rps: "5",
+    kode_mk: "INF302",
+    versi: 1,
+    tgl_penyusunan: new Date("2024-09-12"),
+    dosen_pengampu: "Eko Susanto, M.Kom",
+    status: "Draft",
+    mata_kuliah: {
+      kode_mk: "INF302",
+      nama_mk: "Jaringan Komputer",
+      sks: 3,
+      semester: 4,
+      sifat: "Wajib",
+      id_kurikulum: "1",
+    },
+  },
 ];
 
-const initialData: RPS[] = [
-  { id_rps: "RPS-001", id_mk: "MI101", nama_rps: "RPS Algoritma dan Pemrograman Ganjil 2024/2025" },
-  { id_rps: "RPS-002", id_mk: "MI102", nama_rps: "RPS Basis Data Ganjil 2024/2025" },
-  { id_rps: "RPS-003", id_mk: "MI103", nama_rps: "RPS Pemrograman Web Ganjil 2024/2025" },
-  { id_rps: "RPS-004", id_mk: "MI201", nama_rps: "RPS PBO Genap 2024/2025" },
-  { id_rps: "RPS-005", id_mk: "MI203", nama_rps: "RPS Pemrograman Mobile Genap 2024/2025" },
-];
-
-export default function RPSPage() {
-  const [data, setData] = useState<RPS[]>(initialData);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<RPS | null>(null);
-  const [formData, setFormData] = useState({
-    id_mk: "",
-    nama_rps: "",
-  });
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const filteredData = data.filter(
-    (item) =>
-      item.nama_rps.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.id_mk.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingItem) {
-      setData(
-        data.map((item) =>
-          item.id_rps === editingItem.id_rps
-            ? {
-                ...item,
-                id_mk: formData.id_mk,
-                nama_rps: formData.nama_rps,
-              }
-            : item
-        )
-      );
-    } else {
-      const newId = `RPS-${String(data.length + 1).padStart(3, "0")}`;
-      setData([
-        ...data,
-        {
-          id_rps: newId,
-          id_mk: formData.id_mk,
-          nama_rps: formData.nama_rps,
-        },
-      ]);
-    }
-    handleCloseDialog();
+// Status Badge Component
+function StatusBadge({ status }: { status: string }) {
+  const variants: Record<string, { variant: "default" | "secondary" | "outline"; className: string }> = {
+    Terbit: { variant: "default", className: "bg-green-500 hover:bg-green-600" },
+    "Menunggu Validasi": { variant: "secondary", className: "bg-yellow-500 text-white hover:bg-yellow-600" },
+    Draft: { variant: "outline", className: "" },
   };
 
-  const handleEdit = (item: RPS) => {
-    setEditingItem(item);
-    setFormData({
-      id_mk: item.id_mk,
-      nama_rps: item.nama_rps,
-    });
-    setIsDialogOpen(true);
-  };
-
-  const handleDelete = (id: string) => {
-    if (confirm("Apakah Anda yakin ingin menghapus data ini?")) {
-      setData(data.filter((item) => item.id_rps !== id));
-    }
-  };
-
-  const handleCloseDialog = () => {
-    setIsDialogOpen(false);
-    setEditingItem(null);
-    setFormData({ id_mk: "", nama_rps: "" });
-  };
-
-  const getMKName = (kode: string) => {
-    const mk = mataKuliahOptions.find((m) => m.value === kode);
-    return mk ? mk.label.split(" - ")[1] : kode;
-  };
-
-  const navigate = useNavigate();
+  const config = variants[status] || variants.Draft;
 
   return (
-    <div>
-      <Header
-        title="RPS (Rencana Pembelajaran Semester)"
-        description="Kelola rencana pembelajaran semester"
-      />
+    <Badge variant={config.variant} className={config.className}>
+      {status}
+    </Badge>
+  );
+}
 
-      <div className="p-6">
-        <Button
-          variant="outline"
-          onClick={() => navigate(-1)}
-          className="mb-4"
-        >
-          <Icons.ArrowLeft size={18} className="mr-2" />
-          Kembali
-        </Button>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div className="flex items-center gap-4">
-              <CardTitle>Daftar RPS</CardTitle>
-              <Badge variant="secondary">Total: {data.length} RPS</Badge>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Icons.Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Cari RPS..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 w-64"
-                />
+export default function RPSListPage() {
+  const [rpsList, setRPSList] = useState<RPS[]>(initialRPSList);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+
+  // Filter RPS
+  const filteredRPS = rpsList.filter((rps) => {
+    const matchSearch =
+      rps.mata_kuliah?.nama_mk.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      rps.kode_mk.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      rps.dosen_pengampu.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchStatus = filterStatus === "all" || rps.status === filterStatus;
+    return matchSearch && matchStatus;
+  });
+
+  // Stats
+  const stats = {
+    total: rpsList.length,
+    terbit: rpsList.filter((r) => r.status === "Terbit").length,
+    validasi: rpsList.filter((r) => r.status === "Menunggu Validasi").length,
+    draft: rpsList.filter((r) => r.status === "Draft").length,
+  };
+
+  return (
+    <div className="space-y-6">
+        {/* Stats Cards */}
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total RPS</p>
+                  <p className="text-2xl font-bold">{stats.total}</p>
+                </div>
+                <Icons.FileText className="h-8 w-8 text-muted-foreground/50" />
               </div>
-              <Button onClick={() => setIsDialogOpen(true)}>
-                <Icons.Plus size={18} className="mr-2" />
-                Tambah RPS
-              </Button>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Terbit</p>
+                  <p className="text-2xl font-bold text-green-600">{stats.terbit}</p>
+                </div>
+                <Icons.Check className="h-8 w-8 text-green-500/50" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Menunggu Validasi</p>
+                  <p className="text-2xl font-bold text-yellow-600">{stats.validasi}</p>
+                </div>
+                <Icons.Clock className="h-8 w-8 text-yellow-500/50" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Draft</p>
+                  <p className="text-2xl font-bold text-gray-600">{stats.draft}</p>
+                </div>
+                <Icons.Edit className="h-8 w-8 text-gray-400/50" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Action Bar */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+              <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full sm:w-auto">
+                <div className="relative flex-1 max-w-sm">
+                  <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Cari RPS..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder="Filter Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Status</SelectItem>
+                    {STATUS_RPS_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <a href="/rps/new">
+                <Button>
+                  <Icons.FilePlus size={16} className="mr-2" />
+                  Buat RPS Baru
+                </Button>
+              </a>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Daftar RPS</CardTitle>
+            <CardDescription>
+              Total {filteredRPS.length} RPS ditemukan
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-16">No</TableHead>
-                  <TableHead className="w-28">ID RPS</TableHead>
-                  <TableHead className="w-40">Mata Kuliah</TableHead>
-                  <TableHead>Nama RPS</TableHead>
-                  <TableHead className="w-48 text-center">Aksi</TableHead>
+                  <TableHead className="w-[100px]">Kode MK</TableHead>
+                  <TableHead>Mata Kuliah</TableHead>
+                  <TableHead>Dosen Pengampu</TableHead>
+                  <TableHead className="w-[80px] text-center">Versi</TableHead>
+                  <TableHead className="w-[140px]">Status</TableHead>
+                  <TableHead className="w-[120px]">Tanggal</TableHead>
+                  <TableHead className="w-[150px] text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredData.map((item, index) => (
-                  <TableRow key={item.id_rps}>
-                    <TableCell>{index + 1}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="font-mono">
-                        {item.id_rps}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{item.id_mk}</Badge>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {getMKName(item.id_mk)}
-                      </p>
-                    </TableCell>
-                    <TableCell className="font-medium">{item.nama_rps}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center justify-center gap-1">
-                        <a
-                          href={`/rps/${item.id_rps}`}
-                          className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground h-8 px-3"
-                        >
-                          <Icons.Eye size={16} className="mr-1" />
-                          Detail
-                        </a>
-                        <Button variant="ghost" size="icon" title="Print PDF">
-                          <Icons.Printer size={16} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(item)}
-                        >
-                          <Icons.Pencil size={16} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDelete(item.id_rps)}
-                        >
-                          <Icons.Trash2 size={16} className="text-destructive" />
-                        </Button>
+                {filteredRPS.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8">
+                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                        <Icons.FileText size={40} className="opacity-50" />
+                        <p>Tidak ada data RPS</p>
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
-                {filteredData.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                      {searchQuery ? "Tidak ada RPS yang ditemukan" : "Belum ada data RPS"}
-                    </TableCell>
-                  </TableRow>
+                ) : (
+                  filteredRPS.map((rps) => (
+                    <TableRow key={rps.id_rps}>
+                      <TableCell className="font-mono text-sm font-medium">
+                        {rps.kode_mk}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{rps.mata_kuliah?.nama_mk}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {rps.mata_kuliah?.sks} SKS • Semester {rps.mata_kuliah?.semester}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm">{rps.dosen_pengampu}</TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="outline">v{rps.versi}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={rps.status} />
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {rps.tgl_penyusunan.toLocaleDateString("id-ID", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center justify-end gap-1">
+                          <a href={`/rps/${rps.id_rps}`}>
+                            <Button variant="ghost" size="icon">
+                              <Icons.Eye size={16} />
+                            </Button>
+                          </a>
+                          <a href={`/rps/${rps.id_rps}/edit`}>
+                            <Button variant="ghost" size="icon">
+                              <Icons.Edit size={16} />
+                            </Button>
+                          </a>
+                          <Button variant="ghost" size="icon">
+                            <Icons.Download size={16} />
+                          </Button>
+                          <Button variant="ghost" size="icon">
+                            <Icons.Printer size={16} />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
                 )}
               </TableBody>
             </Table>
           </CardContent>
         </Card>
-      </div>
-
-      {/* Dialog Form */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingItem ? "Edit RPS" : "Tambah RPS"}
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit}>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="id_mk">Mata Kuliah</Label>
-                <Select
-                  id="id_mk"
-                  value={formData.id_mk}
-                  onChange={(e) =>
-                    setFormData({ ...formData, id_mk: e.target.value })
-                  }
-                  options={mataKuliahOptions}
-                  placeholder="Pilih mata kuliah"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="nama_rps">Nama RPS</Label>
-                <Input
-                  id="nama_rps"
-                  value={formData.nama_rps}
-                  onChange={(e) =>
-                    setFormData({ ...formData, nama_rps: e.target.value })
-                  }
-                  placeholder="Contoh: RPS Pemrograman Web Ganjil 2024/2025"
-                  required
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                Batal
-              </Button>
-              <Button type="submit">
-                {editingItem ? "Simpan Perubahan" : "Tambah"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

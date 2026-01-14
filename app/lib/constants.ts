@@ -1,38 +1,16 @@
-export const APP_NAME = "CPL-CPMK";
-export const APP_DESCRIPTION = "Aplikasi Pengolahan Data Capaian Pembelajaran Lulusan dan Capaian Pembelajaran Matakuliah";
-export const PRODI_NAME = "Prodi Manajemen Informatika Unsri";
+export const APP_NAME = "SI-CAP";
+export const APP_DESCRIPTION = "Sistem Informasi Capaian Pembelajaran - Manajemen RPS & CPMK berbasis OBE";
+export const PRODI_NAME = "Prodi Manajemen Informatika";
+export const UNIVERSITAS_NAME = "Universitas Sriwijaya";
 
 export const NAV_ITEMS = [
-  {
-    title: "Dashboard",
-    href: "/",
-    icon: "LayoutDashboard",
-  },
-  {
-    title: "Master Data",
-    icon: "Database",
-    children: [
-      { title: "Program Studi", href: "/prodi", icon: "Building2" },
-      { title: "Kurikulum", href: "/kurikulum", icon: "BookOpen" },
-      { title: "CPL", href: "/cpl", icon: "Target" },
-      { title: "Mata Kuliah", href: "/mata-kuliah", icon: "Book" },
-      { title: "CPMK", href: "/cpmk", icon: "FileCheck" },
-    ],
-  },
-  {
-    title: "RPS",
-    icon: "FileText",
-    children: [
-      { title: "Daftar RPS", href: "/rps", icon: "List" },
-      { title: "Pertemuan", href: "/pertemuan", icon: "Calendar" },
-      { title: "Penilaian", href: "/penilaian", icon: "ClipboardCheck" },
-    ],
-  },
-  {
-    title: "Laporan",
-    href: "/laporan",
-    icon: "BarChart3",
-  },
+  { title: "Dashboard", href: "/", icon: "LayoutDashboard" },
+  { title: "Kurikulum", href: "/kurikulum", icon: "BookOpen" },
+  { title: "Profil/CPL", href: "/cpl", icon: "Target" },
+  { title: "MK", href: "/mata-kuliah", icon: "Book" },
+  { title: "[Matrix]", href: "/matrix-cpl-mk", icon: "Grid3X3" },
+  { title: "RPS", href: "/rps", icon: "FileText" },
+  { title: "Laporan", href: "/laporan", icon: "BarChart3" },
 ] as const;
 
 export const TAHUN_OPTIONS = Array.from({ length: 10 }, (_, i) => {
@@ -40,7 +18,36 @@ export const TAHUN_OPTIONS = Array.from({ length: 10 }, (_, i) => {
   return { value: year.toString(), label: year.toString() };
 });
 
-export const METODE_MENGAJAR_OPTIONS = [
+export const SEMESTER_OPTIONS = [
+  { value: "1", label: "Semester 1" },
+  { value: "2", label: "Semester 2" },
+  { value: "3", label: "Semester 3" },
+  { value: "4", label: "Semester 4" },
+  { value: "5", label: "Semester 5" },
+  { value: "6", label: "Semester 6" },
+  { value: "7", label: "Semester 7" },
+  { value: "8", label: "Semester 8" },
+];
+
+export const SIFAT_MK_OPTIONS = [
+  { value: "Wajib", label: "Wajib" },
+  { value: "Pilihan", label: "Pilihan" },
+];
+
+export const ASPEK_CPL_OPTIONS = [
+  { value: "Sikap", label: "Sikap" },
+  { value: "Pengetahuan", label: "Pengetahuan" },
+  { value: "Keterampilan Umum", label: "Keterampilan Umum" },
+  { value: "Keterampilan Khusus", label: "Keterampilan Khusus" },
+];
+
+export const STATUS_RPS_OPTIONS = [
+  { value: "Draft", label: "Draft" },
+  { value: "Menunggu Validasi", label: "Menunggu Validasi" },
+  { value: "Terbit", label: "Terbit" },
+];
+
+export const METODE_PEMBELAJARAN_OPTIONS = [
   { value: "ceramah", label: "Ceramah" },
   { value: "diskusi", label: "Diskusi" },
   { value: "praktikum", label: "Praktikum" },
@@ -48,6 +55,8 @@ export const METODE_MENGAJAR_OPTIONS = [
   { value: "project", label: "Project Based Learning" },
   { value: "studi_kasus", label: "Studi Kasus" },
   { value: "demonstrasi", label: "Demonstrasi" },
+  { value: "collaborative", label: "Collaborative Learning" },
+  { value: "problem_based", label: "Problem Based Learning" },
 ];
 
 export const BENTUK_PENILAIAN_OPTIONS = [
@@ -58,4 +67,11 @@ export const BENTUK_PENILAIAN_OPTIONS = [
   { value: "praktikum", label: "Praktikum" },
   { value: "project", label: "Project" },
   { value: "presentasi", label: "Presentasi" },
+  { value: "portofolio", label: "Portofolio" },
+  { value: "unjuk_kerja", label: "Unjuk Kerja" },
 ];
+
+export const LEVEL_KKNI_OPTIONS = Array.from({ length: 9 }, (_, i) => ({
+  value: (i + 1).toString(),
+  label: `Level ${i + 1}`,
+}));

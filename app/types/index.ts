@@ -1,116 +1,201 @@
 // =====================
-// ENTITY TYPES - CPL CPMK System
+// ENTITY TYPES - Sistem RPS & CPMK (OBE)
 // =====================
 
-// Program Studi
-export interface Prodi {
-  id_prodi: string;
-  nama_prodi: string;
-  created_at?: Date;
-  updated_at?: Date;
-}
+// Enum untuk aspek CPL
+export type AspekCPL = 'Sikap' | 'Pengetahuan' | 'Keterampilan Umum' | 'Keterampilan Khusus';
 
-// Kurikulum
+// Enum untuk sifat mata kuliah
+export type SifatMK = 'Wajib' | 'Pilihan';
+
+// Enum untuk status kurikulum
+export type StatusKurikulum = 'Aktif' | 'Arsip';
+
+// =====================
+// 1. KURIKULUM - Root/Container Utama
+// =====================
 export interface Kurikulum {
   id_kurikulum: string;
-  tahun: number;
-  id_prodi: string;
-  prodi?: Prodi;
+  nama_kurikulum: string;
+  tahun_berlaku: number;
+  is_active: boolean;
   created_at?: Date;
   updated_at?: Date;
 }
 
-// Capaian Pembelajaran Lulusan (CPL)
+// =====================
+// 2. PROFIL LULUSAN
+// =====================
+export interface ProfilLulusan {
+  id_profil: string;
+  kode_profil: string;     // PL-01, PL-02, dst
+  peran: string;           // Software Engineer, Data Scientist
+  deskripsi: string;
+  id_kurikulum: string;
+  kurikulum?: Kurikulum;
+  cpl_terkait?: string[];  // Array ID/Kode CPL
+  created_at?: Date;
+  updated_at?: Date;
+}
+
+// =====================
+// 3. CAPAIAN PEMBELAJARAN LULUSAN (CPL)
+// =====================
 export interface CPL {
   id_cpl: string;
-  nama_cpl: string;
-  bobot: number;
+  kode_cpl: string;        // S1, P1, KK1, KU1
+  aspek: AspekCPL;
+  deskripsi_cpl: string;
   id_kurikulum: string;
   kurikulum?: Kurikulum;
   created_at?: Date;
   updated_at?: Date;
 }
 
-// Mata Kuliah (MK)
+// =====================
+// 4. KOMPETENSI UTAMA LULUSAN
+// =====================
+export interface KompetensiUtama {
+  id_kompetensi: string;
+  nama_kompetensi: string;
+  level_kkni: number;      // 1-9
+  id_profil: string;
+  profil?: ProfilLulusan;
+  created_at?: Date;
+  updated_at?: Date;
+}
+
+// =====================
+// 5. BAHAN KAJIAN
+// =====================
+export interface BahanKajian {
+  id_bahan_kajian: string;
+  nama_bahan_kajian: string;
+  deskripsi?: string;
+  bobot_min?: number;
+  created_at?: Date;
+  updated_at?: Date;
+}
+
+// =====================
+// 6. MATA KULIAH (MK)
+// =====================
 export interface MataKuliah {
   kode_mk: string;
-  nama: string;
+  nama_mk: string;
   sks: number;
+  semester: number;        // 1-8
+  sifat: SifatMK;
+  deskripsi?: string;
+  id_kurikulum: string;
+  kurikulum?: Kurikulum;
+  bahan_kajian?: BahanKajian[];
   created_at?: Date;
   updated_at?: Date;
 }
 
-// Capaian Pembelajaran Mata Kuliah (CPMK)
+// =====================
+// 7. CAPAIAN PEMBELAJARAN MATA KULIAH (CPMK)
+// =====================
 export interface CPMK {
   id_cpmk: string;
-  id_mk: string;
-  nama_cpmk: string;
-  id_kurikulum: string;
+  kode_cpmk: string;       // M1, M2, dst
+  deskripsi_cpmk: string;
+  bobot_persentase: number;
+  kode_mk: string;
+  id_cpl: string;          // Relasi ke CPL
   mata_kuliah?: MataKuliah;
-  kurikulum?: Kurikulum;
+  cpl?: CPL;
   created_at?: Date;
   updated_at?: Date;
 }
 
-// Rencana Pembelajaran Semester (RPS)
-export interface RPS {
-  id_rps: string;
-  id_mk: string;
-  nama_rps: string;
-  mata_kuliah?: MataKuliah;
-  created_at?: Date;
-  updated_at?: Date;
-}
-
-// Supporting CPL (Relasi CPL - RPS)
-export interface SCPL {
-  id_scpl: string;
-  id_cpl: string;
-  id_rps: string;
-  cpl?: CPL;
-  rps?: RPS;
-}
-
-// Relasi CPMK (R_CPMK)
-export interface RCPMK {
-  id_rcpmk: string;
-  id_cpl: string;
-  id_rps: string;
-  bobot: number;
-  id_pertemuan: string;
-  cpl?: CPL;
-  rps?: RPS;
-}
-
-// Pertemuan
-export interface Pertemuan {
-  id_pertemuan: string;
-  pertemuan_ke: number;
-  id_rps: string;
+// =====================
+// 8. SUB-CPMK
+// =====================
+export interface SubCPMK {
+  id_sub_cpmk: string;
+  kode_sub: string;        // L1.1, L1.2
+  deskripsi_sub_cpmk: string;
+  indikator: string;
+  kriteria_penilaian: string;
   id_cpmk: string;
-  indikator_pembelajaran: string;
-  materi: string;
-  metode_mengajar: string;
-  alat_bantu: string;
-  capaian_pembelajaran: string;
-  bobot: number;
-  jumlah_unit_ajar: number;
-  rps?: RPS;
   cpmk?: CPMK;
   created_at?: Date;
   updated_at?: Date;
 }
 
-// Penilaian
-export interface Penilaian {
-  id_penilaian: string;
-  bobot_nilai: number;
+// =====================
+// 9. RENCANA PEMBELAJARAN STUDI (RPS)
+// =====================
+export interface RPS {
   id_rps: string;
+  kode_mk: string;
+  versi: number;
+  tgl_penyusunan: Date;
+  dosen_pengampu: string;
+  koordinator_rmk?: string;
+  kaprodi?: string;
+  deskripsi_mk?: string;
+  pustaka_utama?: string;
+  pustaka_pendukung?: string;
+  media_pembelajaran?: string;
+  status: 'Draft' | 'Menunggu Validasi' | 'Terbit';
+  mata_kuliah?: MataKuliah;
+  created_at?: Date;
+  updated_at?: Date;
+}
+
+// =====================
+// PIVOT/JUNCTION TABLES
+// =====================
+
+// Relasi Profil Lulusan - CPL (Many to Many)
+export interface ProfilCPL {
+  id_profil: string;
+  id_cpl: string;
+}
+
+// Relasi CPL - Bahan Kajian (Many to Many)
+export interface CPLBahanKajian {
+  id_cpl: string;
+  id_bahan_kajian: string;
+}
+
+// Relasi Mata Kuliah - Bahan Kajian (Many to Many)
+export interface MKBahanKajian {
+  kode_mk: string;
+  id_bahan_kajian: string;
+}
+
+// Relasi CPL - Mata Kuliah / Matrix Mapping (Many to Many)
+export interface CPLMataKuliah {
+  id_cpl: string;
+  kode_mk: string;
+  kontribusi?: 'High' | 'Medium' | 'Low';
+}
+
+// Sub-CPMK - Pertemuan RPS (Many to Many)
+export interface SubCPMKPertemuan {
+  id_sub_cpmk: string;
   id_pertemuan: string;
-  nama_penilaian: string;
-  bentuk_penilaian: string;
+}
+
+// =====================
+// PERTEMUAN (Detail RPS per Minggu)
+// =====================
+export interface Pertemuan {
+  id_pertemuan: string;
+  id_rps: string;
+  pertemuan_ke: number;    // 1-16
+  sub_cpmk_ids?: string[];
+  bahan_kajian?: string;
+  bentuk_pembelajaran: string;
+  estimasi_waktu: number;  // dalam menit
+  pengalaman_belajar?: string;
+  indikator_penilaian?: string;
+  bobot_penilaian: number;
   rps?: RPS;
-  pertemuan?: Pertemuan;
   created_at?: Date;
   updated_at?: Date;
 }
@@ -118,20 +203,20 @@ export interface Penilaian {
 // =====================
 // FORM TYPES
 // =====================
-
-export type ProdiForm = Omit<Prodi, 'id_prodi' | 'created_at' | 'updated_at'>;
-export type KurikulumForm = Omit<Kurikulum, 'id_kurikulum' | 'prodi' | 'created_at' | 'updated_at'>;
+export type KurikulumForm = Omit<Kurikulum, 'id_kurikulum' | 'created_at' | 'updated_at'>;
+export type ProfilLulusanForm = Omit<ProfilLulusan, 'id_profil' | 'kurikulum' | 'cpl_terkait' | 'created_at' | 'updated_at'>;
 export type CPLForm = Omit<CPL, 'id_cpl' | 'kurikulum' | 'created_at' | 'updated_at'>;
-export type MataKuliahForm = Omit<MataKuliah, 'created_at' | 'updated_at'>;
-export type CPMKForm = Omit<CPMK, 'id_cpmk' | 'mata_kuliah' | 'kurikulum' | 'created_at' | 'updated_at'>;
+export type KompetensiUtamaForm = Omit<KompetensiUtama, 'id_kompetensi' | 'profil' | 'created_at' | 'updated_at'>;
+export type BahanKajianForm = Omit<BahanKajian, 'id_bahan_kajian' | 'created_at' | 'updated_at'>;
+export type MataKuliahForm = Omit<MataKuliah, 'kurikulum' | 'bahan_kajian' | 'created_at' | 'updated_at'>;
+export type CPMKForm = Omit<CPMK, 'id_cpmk' | 'mata_kuliah' | 'cpl' | 'created_at' | 'updated_at'>;
+export type SubCPMKForm = Omit<SubCPMK, 'id_sub_cpmk' | 'cpmk' | 'created_at' | 'updated_at'>;
 export type RPSForm = Omit<RPS, 'id_rps' | 'mata_kuliah' | 'created_at' | 'updated_at'>;
-export type PertemuanForm = Omit<Pertemuan, 'id_pertemuan' | 'rps' | 'cpmk' | 'created_at' | 'updated_at'>;
-export type PenilaianForm = Omit<Penilaian, 'id_penilaian' | 'rps' | 'pertemuan' | 'created_at' | 'updated_at'>;
+export type PertemuanForm = Omit<Pertemuan, 'id_pertemuan' | 'rps' | 'created_at' | 'updated_at'>;
 
 // =====================
 // API RESPONSE TYPES
 // =====================
-
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;
@@ -151,46 +236,35 @@ export interface PaginatedResponse<T> {
 // =====================
 // DASHBOARD STATS
 // =====================
-
 export interface DashboardStats {
-  totalProdi: number;
   totalKurikulum: number;
+  totalProfilLulusan: number;
   totalCPL: number;
   totalMataKuliah: number;
   totalCPMK: number;
   totalRPS: number;
+  rpsSelesai: number;
+  rpsDraft: number;
+  kurikulumAktif?: Kurikulum;
 }
 
 // =====================
-// LAPORAN TYPES
+// CHART DATA TYPES
 // =====================
+export interface CPLDistributionData {
+  kode_cpl: string;
+  aspek: AspekCPL;
+  jumlah_mk: number;
+}
 
-export interface LaporanPerMK {
-  kode_mk: string;
+export interface RPSStatusData {
+  status: string;
+  jumlah: number;
+}
+
+export interface RecentRPSUpdate {
+  id_rps: string;
   nama_mk: string;
-  total_cpmk: number;
-  total_cpl: number;
-  rata_rata_bobot: number;
-}
-
-export interface LaporanPerTahun {
-  tahun: number;
-  total_kurikulum: number;
-  total_cpl: number;
-  total_mk: number;
-}
-
-export interface LaporanPerCPL {
-  id_cpl: string;
-  nama_cpl: string;
-  bobot: number;
-  total_mk_terkait: number;
-}
-
-export interface LaporanPerCPMK {
-  id_cpmk: string;
-  nama_cpmk: string;
-  kode_mk: string;
-  nama_mk: string;
-  total_pertemuan: number;
+  dosen_pengampu: string;
+  updated_at: Date;
 }

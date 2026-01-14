@@ -5,17 +5,19 @@ export default [
     // Dashboard
     index("pages/dashboard.tsx"),
     
-    // Master Data
-    route("prodi", "pages/prodi.tsx"),
+    // Master Data - Kurikulum
     route("kurikulum", "pages/kurikulum.tsx"),
+    route("profil-lulusan", "pages/profil-lulusan.tsx"),
     route("cpl", "pages/cpl.tsx"),
+    route("bahan-kajian", "pages/bahan-kajian.tsx"),
     route("mata-kuliah", "pages/mata-kuliah.tsx"),
-    route("cpmk", "pages/cpmk.tsx"),
+    route("matrix-cpl-mk", "pages/matrix-cpl-mk.tsx"),
     
-    // RPS
+    // RPS & CPMK
+    route("cpmk", "pages/cpmk.tsx"),
     route("rps", "pages/rps/index.tsx"),
-    route("rps/:id", "pages/rps/detail.tsx"),
-    route("penilaian", "pages/penilaian.tsx"),
+    route("rps/new", "pages/rps/new.tsx", { id: "rps-new" }),
+    route("rps/:id/edit", "pages/rps/new.tsx", { id: "rps-edit" }),
     
     // Laporan
     route("laporan", "pages/laporan.tsx"),
