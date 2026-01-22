@@ -269,7 +269,39 @@ export interface DashboardStats {
   totalRPS: number;
   rpsSelesai: number;
   rpsDraft: number;
-  kurikulumAktif?: Kurikulum;
+  kurikulumAktif?: Kurikulum[];
+  kkm: number; // Kriteria Ketuntasan Minimal
+}
+
+// =====================
+// MAHASISWA - Data Mahasiswa
+// =====================
+export interface Mahasiswa {
+  nim: string;
+  nama_mahasiswa: string;
+  angkatan: number;
+  prodi?: string;
+  email?: string;
+  foto_url?: string;
+  created_at?: Date;
+  updated_at?: Date;
+}
+
+// =====================
+// NILAI MAHASISWA - Nilai per CPMK/Sub-CPMK
+// =====================
+export interface NilaiMahasiswa {
+  id_nilai: string;
+  nim: string;
+  kode_mk: string;
+  id_cpmk: string;
+  nilai: number;
+  semester: string; // contoh: "2024/2025 Ganjil"
+  mahasiswa?: Mahasiswa;
+  mata_kuliah?: MataKuliah;
+  cpmk?: CPMK;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 // =====================
@@ -291,4 +323,62 @@ export interface RecentRPSUpdate {
   nama_mk: string;
   dosen_pengampu: string;
   updated_at: Date;
+}
+
+// Grafik Profil Lulusan
+export interface ProfilLulusanChartData {
+  kode: string;
+  nama: string;
+  jumlah_cpl: number;
+  persentase: number;
+}
+
+// Grafik CPL (Bahan Kajian)
+export interface CPLChartData {
+  kode: string;
+  nama: string;
+  rata_rata: number;
+  jumlah_mk: number;
+}
+
+// Grafik Bahan Kajian (Mata Kuliah)
+export interface BahanKajianChartData {
+  kode: string;
+  nama: string;
+  rata_rata: number;
+  jumlah_mahasiswa: number;
+}
+
+// Grafik Mahasiswa di bawah KKM per MK
+export interface MahasiswaBawahKKMData {
+  kode_mk: string;
+  nama_mk: string;
+  jumlah_dibawah_kkm: number;
+  total_mahasiswa: number;
+  persentase: number;
+}
+
+// Grafik CPMK per Mata Kuliah
+export interface CPMKRataRataData {
+  kode_cpmk: string;
+  rata_rata: number;
+  jumlah_mahasiswa: number;
+}
+
+// Data Nilai Mahasiswa per MK (from API)
+export interface NilaiMahasiswaPerMK {
+  nim: string;
+  nama_mahasiswa: string;
+  angkatan: number;
+  nilai_per_cpmk: { kode_cpmk: string; nilai: number }[];
+  nilai_akhir: number;
+  status: 'Lulus' | 'Tidak Lulus';
+}
+
+// Data untuk Chart Nilai Mahasiswa Individual
+export interface MahasiswaNilaiChartItem {
+  kode_mk: string;
+  nama_mk: string;
+  nilai_akhir: number;
+  status: string;
 }

@@ -1048,12 +1048,13 @@ wrangler tail
 - **KK** = Keterampilan Khusus
 
 ### Business Rules
-1. **Kurikulum** - Hanya 1 kurikulum aktif per prodi
+1. **Kurikulum** - Bisa lebih dari 1 kurikulum aktif per prodi (multiple active)
 2. **MK → BK** - 1 MK memiliki 1 Bahan Kajian
 3. **MK → CPL** - 1 MK memiliki minimal 2 CPL
 4. **RPS** - Harus divalidasi Kaprodi sebelum Terbit
 5. **CPMK** - Total bobot harus 100%
 6. **Penugasan Dosen** - 1 MK bisa memiliki multiple dosen, 1 koordinator
+7. **KKM** - Kriteria Ketuntasan Minimal yang dapat diatur oleh Kaprodi (default: 70)
 
 ### Frontend Integration
 - Base URL: `https://si-cap-api.workers.dev` (production)
@@ -1067,6 +1068,131 @@ wrangler tail
 - `403` - Forbidden (insufficient role)
 - `404` - Not Found
 - `500` - Internal Server Error
+
+---
+
+## 📈 Dashboard Analytics API Endpoints (NEW)
+
+### KKM Settings
+```typescript
+// GET /api/settings/kkm - Get current KKM value
+// PUT /api/settings/kkm - Update KKM value (Kaprodi only)
+{
+  "kkm": 70 // 0-100
+}
+```
+
+### Profil Lulusan Chart Data
+```typescript
+// GET /api/dashboard/profil-lulusan
+// Response: Array of Profil Lulusan with achievement percentage
+interface ProfilLulusanChartData {
+  kode: string;           // PL1, PL2, PL3
+  nama: string;           // Software Engineer, etc
+  jumlah_cpl: number;     // Related CPL count
+  persentase: number;     // Achievement percentage (0-100)
+}
+```
+
+### CPL/Bahan Kajian Chart Data
+```typescript
+// GET /api/dashboard/cpl
+// Response: Array of CPL (Bahan Kajian) with average scores
+interface CPLChartData {
+  kode: string;           // BK1, BK2, BK3
+  nama: string;           // Pemrograman Dasar, etc
+  rata_rata: number;      // Average score (0-100)
+  jumlah_mk: number;      // Related MK count
+}
+```
+
+### Bahan Kajian/Mata Kuliah Chart Data
+```typescript
+// GET /api/dashboard/mata-kuliah
+// Response: Array of MK with average scores
+interface BahanKajianChartData {
+  kode: string;           // MK1, MK2, MK3
+  nama: string;           // Algoritma & Pemrograman, etc
+  rata_rata: number;      // Average score (0-100)
+  jumlah_mahasiswa: number;
+}
+```
+
+### Mahasiswa di Bawah KKM per MK
+```typescript
+// GET /api/dashboard/mahasiswa-bawah-kkm/:kode_mk
+// Response: Trend data per semester
+interface MahasiswaBawahKKMData {
+  kode_mk: string;            // Semester identifier
+  nama_mk: string;            // Semester name (2023/2024 Ganjil)
+  jumlah_dibawah_kkm: number; // Count below KKM
+  total_mahasiswa: number;    // Total students
+  persentase: number;         // Percentage below KKM
+}
+```
+
+### CPMK Average per MK
+```typescript
+// GET /api/dashboard/cpmk/:kode_mk
+// Response: Array of CPMK average scores
+interface CPMKRataRataData {
+  kode_cpmk: string;      // CPMK1, CPMK2, CPMK3
+  rata_rata: number;      // Average score (0-100)
+  jumlah_mahasiswa: number;
+}
+```
+
+### Mahasiswa Grade Data
+```typescript
+// GET /api/dashboard/mahasiswa/:nim
+// Response: Student's grades per MK
+interface NilaiMahasiswaPerMK {
+  nim: string;
+  nama_mahasiswa: string;
+  angkatan: number;
+  nilai_per_cpmk: { kode_cpmk: string; nilai: number }[];
+  nilai_akhir: number;
+  status: 'Lulus' | 'Tidak Lulus';
+}
+```
+
+---
+
+## 🎓 Mahasiswa Schema (NEW)
+
+```typescript
+// ==================== MAHASISWA ====================
+export const mahasiswa = sqliteTable('mahasiswa', {
+  nim: text('nim').primaryKey(),
+  nama_mahasiswa: text('nama_mahasiswa').notNull(),
+  angkatan: integer('angkatan').notNull(),
+  id_prodi: text('id_prodi').notNull().references(() => prodi.id),
+  email: text('email'),
+  foto_url: text('foto_url'),
+  created_at: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+});
+
+// ==================== NILAI MAHASISWA ====================
+export const nilaiMahasiswa = sqliteTable('nilai_mahasiswa', {
+  id: text('id').primaryKey(),
+  nim: text('nim').notNull().references(() => mahasiswa.nim, { onDelete: 'cascade' }),
+  kode_mk: text('kode_mk').notNull().references(() => mataKuliah.kode_mk, { onDelete: 'cascade' }),
+  id_cpmk: text('id_cpmk').notNull().references(() => cpmk.id, { onDelete: 'cascade' }),
+  nilai: real('nilai').notNull(), // 0-100
+  semester: text('semester').notNull(), // "2024/2025 Ganjil"
+  created_at: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+});
+
+// ==================== SETTINGS (KKM) ====================
+export const settings = sqliteTable('settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+});
+// Default: { key: 'kkm', value: '70' }
+```
 
 ---
 

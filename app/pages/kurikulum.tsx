@@ -44,7 +44,7 @@ const initialKurikulums: Kurikulum[] = [
     id_kurikulum: "2",
     nama_kurikulum: "Kurikulum KKNI 2020",
     tahun_berlaku: 2020,
-    is_active: false,
+    is_active: true,
     created_at: new Date("2020-02-10"),
   },
   {
@@ -121,12 +121,12 @@ export default function KurikulumPage() {
     handleCloseDialog();
   };
 
-  // Handle set active
-  const handleSetActive = (id: string) => {
+  // Handle toggle active (bisa lebih dari 1 kurikulum aktif)
+  const handleToggleActive = (id: string) => {
     setKurikulums((prev) =>
       prev.map((k) => ({
         ...k,
-        is_active: k.id_kurikulum === id,
+        is_active: k.id_kurikulum === id ? !k.is_active : k.is_active,
       }))
     );
   };
@@ -278,29 +278,27 @@ export default function KurikulumPage() {
                             <Icons.Copy size={14} className="mr-1" />
                             Salin
                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={kurikulum.is_active ? "text-green-600 hover:text-green-700" : "text-orange-600 hover:text-orange-700"}
+                            onClick={() => handleToggleActive(kurikulum.id_kurikulum)}
+                          >
+                            <Icons.Power size={14} className="mr-1" />
+                            {kurikulum.is_active ? "Nonaktifkan" : "Aktifkan"}
+                          </Button>
                           {!kurikulum.is_active && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-orange-600 hover:text-orange-700"
-                                onClick={() => handleSetActive(kurikulum.id_kurikulum)}
-                              >
-                                <Icons.Power size={14} className="mr-1" />
-                                Aktifkan
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-destructive hover:text-destructive"
-                                onClick={() => {
-                                  setDeletingKurikulum(kurikulum);
-                                  setIsDeleteDialogOpen(true);
-                                }}
-                              >
-                                <Icons.Trash size={14} />
-                              </Button>
-                            </>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => {
+                                setDeletingKurikulum(kurikulum);
+                                setIsDeleteDialogOpen(true);
+                              }}
+                            >
+                              <Icons.Trash size={14} />
+                            </Button>
                           )}
                         </div>
                       </TableCell>
