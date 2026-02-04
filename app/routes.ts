@@ -19,6 +19,9 @@ export default [
     route("rps/new", "pages/rps/new.tsx", { id: "rps-new" }),
     route("rps/:id/edit", "pages/rps/new.tsx", { id: "rps-edit" }),
     
+    // Evaluasi Pembelajaran
+    route("evaluasi", "pages/evaluasi.tsx"),
+    
     // Laporan
     route("laporan", "pages/laporan.tsx"),
   ]),

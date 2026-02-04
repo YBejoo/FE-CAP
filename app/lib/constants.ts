@@ -12,7 +12,8 @@ export const NAV_ITEMS = [
   { title: "Bahan Kajian", href: "/bahan-kajian", icon: "Layers" },
   { title: "Mata Kuliah", href: "/mata-kuliah", icon: "Book" },
   { title: "RPS", href: "/rps", icon: "FileText" },
-  { title: "Laporan", href: "/laporan", icon: "BarChart3" },
+  { title: "Evaluasi Pembelajaran", href: "/evaluasi", icon: "BarChart3" },
+  { title: "Laporan", href: "/laporan", icon: "Users" },
 ] as const;
 
 export const TAHUN_OPTIONS = Array.from({ length: 10 }, (_, i) => {

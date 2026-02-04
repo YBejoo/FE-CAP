@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { Header } from "~/components/header";
 import {
@@ -18,41 +18,22 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui";
+import { useLaporan } from "~/hooks/useLaporan";
+import { useKurikulum } from "~/hooks/useKurikulum";
 
-// Dummy data untuk laporan
-const laporanPerMK = [
-  { kode_mk: "MI101", nama_mk: "Algoritma dan Pemrograman", total_cpmk: 5, total_cpl: 3, rata_rata_bobot: 8.5 },
-  { kode_mk: "MI102", nama_mk: "Basis Data", total_cpmk: 4, total_cpl: 3, rata_rata_bobot: 8.0 },
-  { kode_mk: "MI103", nama_mk: "Pemrograman Web", total_cpmk: 6, total_cpl: 4, rata_rata_bobot: 9.0 },
-  { kode_mk: "MI201", nama_mk: "PBO", total_cpmk: 4, total_cpl: 3, rata_rata_bobot: 8.2 },
-  { kode_mk: "MI203", nama_mk: "Pemrograman Mobile", total_cpmk: 5, total_cpl: 4, rata_rata_bobot: 8.8 },
-];
-
-const laporanPerCPL = [
-  { id_cpl: "CPL-1", nama_cpl: "Mampu menerapkan pemikiran logis, kritis, sistematis", bobot: 10, total_mk: 8 },
-  { id_cpl: "CPL-2", nama_cpl: "Mampu menunjukkan kinerja mandiri, bermutu", bobot: 8, total_mk: 6 },
-  { id_cpl: "CPL-3", nama_cpl: "Mampu mengkaji implikasi pengembangan teknologi", bobot: 8, total_mk: 5 },
-  { id_cpl: "CPL-4", nama_cpl: "Mampu menyusun deskripsi saintifik", bobot: 10, total_mk: 4 },
-  { id_cpl: "CPL-5", nama_cpl: "Mampu mengambil keputusan secara tepat", bobot: 9, total_mk: 7 },
-];
-
-const laporanPerTahun = [
-  { tahun: 2020, total_kurikulum: 1, total_cpl: 10, total_mk: 35 },
-  { tahun: 2022, total_kurikulum: 1, total_cpl: 11, total_mk: 40 },
-  { tahun: 2024, total_kurikulum: 1, total_cpl: 12, total_mk: 45 },
-];
 
 type LaporanType = "per-mk" | "per-cpl" | "per-tahun" | "per-cpmk";
 
-const kurikulumOptions = [
-  { value: "K2024", label: "Kurikulum 2024" },
-  { value: "K2022", label: "Kurikulum 2022" },
-  { value: "K2020", label: "Kurikulum 2020" },
-];
-
 export default function LaporanPage() {
+  const { laporanPerMK, laporanPerCPL, laporanPerTahun, loading } = useLaporan();
+  const { kurikulums, loading: kurikulumLoading } = useKurikulum();
   const [selectedLaporan, setSelectedLaporan] = useState<LaporanType>("per-mk");
-  const [selectedKurikulum, setSelectedKurikulum] = useState("K2024");
+  const [selectedKurikulum, setSelectedKurikulum] = useState("");
+
+  const kurikulumOptions = useMemo(
+    () => kurikulums.map((k) => ({ value: k.id_kurikulum, label: k.nama_kurikulum })),
+    [kurikulums]
+  );
 
   const renderLaporanPerMK = () => (
     <Table>
@@ -184,6 +165,17 @@ export default function LaporanPage() {
   };
 
   const navigate = useNavigate();
+
+  if (loading || kurikulumLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <Icons.Loader className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

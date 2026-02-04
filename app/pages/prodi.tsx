@@ -22,62 +22,88 @@ import {
   TableRow,
 } from "~/components/ui";
 import type { Prodi } from "~/types";
-
-// Dummy data
-const initialData: Prodi[] = [
-  {
-    id_prodi: "1",
-    nama_prodi: "Manajemen Informatika",
-    created_at: new Date("2024-01-01"),
-  },
-];
+import { useProdi } from "~/hooks/useProdi";
 
 export default function ProdiPage() {
-  const [data, setData] = useState<Prodi[]>(initialData);
+  const {
+    data,
+    loading,
+    createProdi,
+    updateProdi,
+    deleteProdi,
+  } = useProdi();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Prodi | null>(null);
-  const [formData, setFormData] = useState({ nama_prodi: "" });
+  const [formData, setFormData] = useState({
+    kode_prodi: "",
+    nama_prodi: "",
+    fakultas: "",
+    jenjang: "",
+    akreditasi: "",
+  });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (editingItem) {
-      setData(
-        data.map((item) =>
-          item.id_prodi === editingItem.id_prodi
-            ? { ...item, nama_prodi: formData.nama_prodi }
-            : item
-        )
-      );
+      await updateProdi(editingItem.id_prodi, {
+        kode_prodi: formData.kode_prodi,
+        nama_prodi: formData.nama_prodi,
+        fakultas: formData.fakultas,
+        jenjang: formData.jenjang,
+        akreditasi: formData.akreditasi || undefined,
+      });
     } else {
-      setData([
-        ...data,
-        {
-          id_prodi: Date.now().toString(),
-          nama_prodi: formData.nama_prodi,
-          created_at: new Date(),
-        },
-      ]);
+      await createProdi({
+        kode_prodi: formData.kode_prodi,
+        nama_prodi: formData.nama_prodi,
+        fakultas: formData.fakultas,
+        jenjang: formData.jenjang,
+        akreditasi: formData.akreditasi || undefined,
+      });
     }
     handleCloseDialog();
   };
 
   const handleEdit = (item: Prodi) => {
     setEditingItem(item);
-    setFormData({ nama_prodi: item.nama_prodi });
+    setFormData({
+      kode_prodi: item.kode_prodi || "",
+      nama_prodi: item.nama_prodi,
+      fakultas: item.fakultas || "",
+      jenjang: item.jenjang || "",
+      akreditasi: item.akreditasi || "",
+    });
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm("Apakah Anda yakin ingin menghapus data ini?")) {
-      setData(data.filter((item) => item.id_prodi !== id));
+      await deleteProdi(id);
     }
   };
 
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
     setEditingItem(null);
-    setFormData({ nama_prodi: "" });
+    setFormData({
+      kode_prodi: "",
+      nama_prodi: "",
+      fakultas: "",
+      jenjang: "",
+      akreditasi: "",
+    });
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <Icons.Loader className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -155,6 +181,18 @@ export default function ProdiPage() {
           <form onSubmit={handleSubmit}>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
+                <Label htmlFor="kode_prodi">Kode Prodi</Label>
+                <Input
+                  id="kode_prodi"
+                  value={formData.kode_prodi}
+                  onChange={(e) =>
+                    setFormData({ ...formData, kode_prodi: e.target.value })
+                  }
+                  placeholder="TI"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="nama_prodi">Nama Program Studi</Label>
                 <Input
                   id="nama_prodi"
@@ -162,8 +200,43 @@ export default function ProdiPage() {
                   onChange={(e) =>
                     setFormData({ ...formData, nama_prodi: e.target.value })
                   }
-                  placeholder="Masukkan nama program studi"
+                  placeholder="Teknik Informatika"
                   required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="fakultas">Fakultas</Label>
+                <Input
+                  id="fakultas"
+                  value={formData.fakultas}
+                  onChange={(e) =>
+                    setFormData({ ...formData, fakultas: e.target.value })
+                  }
+                  placeholder="Fakultas Teknik"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="jenjang">Jenjang</Label>
+                <Input
+                  id="jenjang"
+                  value={formData.jenjang}
+                  onChange={(e) =>
+                    setFormData({ ...formData, jenjang: e.target.value })
+                  }
+                  placeholder="S1"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="akreditasi">Akreditasi</Label>
+                <Input
+                  id="akreditasi"
+                  value={formData.akreditasi}
+                  onChange={(e) =>
+                    setFormData({ ...formData, akreditasi: e.target.value })
+                  }
+                  placeholder="A"
                 />
               </div>
             </div>

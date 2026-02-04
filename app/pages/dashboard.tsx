@@ -14,6 +14,13 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Button,
 } from "~/components/ui";
 import {
   BarChart,
@@ -491,29 +498,43 @@ function SearchableSelect({
 
 export default function DashboardPage() {
   // State untuk KKM
-  const [kkm, setKkm] = useState(stats.kkm);
+  const [kkm, setKkm] = useState(75);
+  const [inputKkm, setInputKkm] = useState(75);
+  const [showKkmDialog, setShowKkmDialog] = useState(false);
 
-  // State untuk dropdown MK (grafik garis & lingkaran)
-  const [selectedMK, setSelectedMK] = useState("MK001");
+  // State untuk dropdown Kurikulum
+  const [selectedKurikulum, setSelectedKurikulum] = useState("1");
 
-  // State untuk dropdown Mahasiswa
-  const [selectedMahasiswa, setSelectedMahasiswa] = useState("2021001");
+  // Handler untuk menampilkan dialog konfirmasi
+  const handleShowKkmDialog = () => {
+    if (inputKkm !== kkm && inputKkm >= 0 && inputKkm <= 100) {
+      setShowKkmDialog(true);
+    }
+  };
 
-  // State untuk search mahasiswa
-  const [mahasiswaSearch, setMahasiswaSearch] = useState("");
+  // Konfirmasi perubahan KKM
+  const confirmKkmChange = () => {
+    setKkm(inputKkm);
+    setShowKkmDialog(false);
+  };
 
-  // Filter mahasiswa berdasarkan search
-  const filteredMahasiswa = mahasiswaList.filter(
-    (m) =>
-      m.nama_mahasiswa.toLowerCase().includes(mahasiswaSearch.toLowerCase()) ||
-      m.nim.includes(mahasiswaSearch)
-  );
+  // Batalkan perubahan KKM
+  const cancelKkmChange = () => {
+    setInputKkm(kkm);
+    setShowKkmDialog(false);
+  };
 
-  // Data mahasiswa yang dipilih
-  const selectedMahasiswaData = mahasiswaList.find((m) => m.nim === selectedMahasiswa);
-
-  // Data nilai mahasiswa untuk semua MK
-  const nilaiMahasiswaTerpilih = nilaiMahasiswaPerMK[selectedMahasiswa] || {};
+  // Stats dummy
+  const stats: DashboardStats = {
+    totalMataKuliah: mataKuliahList.length,
+    totalCPL: 12,
+    totalCPMK: 48,
+    totalMahasiswa: mahasiswaList.length,
+    kurikulumAktif: [
+      { id_kurikulum: "1", nama_kurikulum: "Kurikulum 2024", tahun_ajaran: "2024/2025" }
+    ],
+    kkm: 75,
+  };
 
   // Compute grafik berdasarkan KKM
   const profilLulusanWithKKM = useMemo(() => {
@@ -537,46 +558,71 @@ export default function DashboardPage() {
     }));
   }, [kkm]);
 
-  // Data untuk grafik garis mahasiswa di bawah KKM
-  const mahasiswaBawahKKM = mahasiswaBawahKKMPerMK[selectedMK] || mahasiswaBawahKKMPerMK.MK001;
-
-  // Data untuk pie chart CPMK
-  const cpmkData = cpmkRataRataPerMK[selectedMK] || cpmkRataRataPerMK.MK001;
-
-  // Nama MK terpilih
-  const selectedMKData = mataKuliahList.find((mk) => mk.kode_mk === selectedMK);
-
-  // Data untuk grafik mahasiswa individual
-  const mahasiswaNilaiChartData = Object.entries(nilaiMahasiswaTerpilih).map(([kodeMK, nilai]) => ({
-    kode_mk: kodeMK,
-    nama_mk: mataKuliahList.find((mk) => mk.kode_mk === kodeMK)?.nama_mk || kodeMK,
-    nilai_akhir: nilai.nilai_akhir,
-    status: nilai.nilai_akhir >= kkm ? "Lulus" : "Tidak Lulus",
-  }));
-
   return (
     <div className="space-y-6">
+      {/* Header with Kurikulum Dropdown */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Dashboard</h1>
+          <p className="text-slate-600 dark:text-slate-400">
+            Analisis Capaian Pembelajaran dan Evaluasi Kurikulum
+          </p>
+        </div>
+        <div className="w-full sm:w-80">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 block">
+            Pilih Kurikulum
+          </label>
+          <Select value={selectedKurikulum} onValueChange={setSelectedKurikulum}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Pilih Kurikulum" />
+            </SelectTrigger>
+            <SelectContent>
+              {stats.kurikulumAktif && stats.kurikulumAktif.length > 0 ? (
+                stats.kurikulumAktif.map((kur) => (
+                  <SelectItem key={kur.id_kurikulum} value={kur.id_kurikulum}>
+                    {kur.nama_kurikulum} ({kur.tahun_ajaran})
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="1">Kurikulum 2024</SelectItem>
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       {/* Row 1: KKM Setting & Quick Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         {/* KKM Input Card */}
-        <Card className="lg:col-span-1 border-2 border-primary/20">
+        <Card className="lg:col-span-1 border-2 border-primary/20 shadow-sm hover:shadow-md transition-shadow">
           <CardContent className="p-4">
             <div className="space-y-2">
               <Label htmlFor="kkm" className="text-sm font-medium flex items-center gap-2">
                 <Icons.Settings size={16} className="text-primary" />
                 Batas KKM
               </Label>
-              <Input
-                id="kkm"
-                type="number"
-                min={0}
-                max={100}
-                value={kkm}
-                onChange={(e) => setKkm(Number(e.target.value))}
-                className="text-lg font-bold text-center"
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="kkm"
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={inputKkm}
+                  onChange={(e) => setInputKkm(Number(e.target.value))}
+                  className="text-lg font-bold text-center flex-1"
+                />
+                <Button
+                  size="sm"
+                  onClick={handleShowKkmDialog}
+                  disabled={inputKkm === kkm || inputKkm < 0 || inputKkm > 100}
+                  className="px-3"
+                  title="Terapkan perubahan KKM"
+                >
+                  <Icons.Check size={18} />
+                </Button>
+              </div>
               <p className="text-xs text-muted-foreground text-center">
-                Perubahan KKM akan mempengaruhi semua grafik
+                KKM Aktif: <span className="font-bold text-foreground">{kkm}</span>
               </p>
             </div>
           </CardContent>
@@ -617,30 +663,36 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Row 2: Grafik Profil Lulusan (Bar Chart) */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Icons.Users size={20} className="text-blue-600" />
+      {/* Row 2: Grafik Profil Lulusan (Bar Chart - Horizontal) */}
+      <Card className="shadow-sm hover:shadow-md transition-shadow border-2">
+        <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-b">
+          <CardTitle className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg">
+              <Icons.Users size={20} className="text-blue-600 dark:text-blue-400" />
+            </div>
             Grafik Profil Lulusan
           </CardTitle>
           <CardDescription>
-            Persentase pencapaian setiap Profil Lulusan (PL1, PL2, PL3, ...) | KKM: {kkm}
+            Persentase pencapaian setiap Profil Lulusan | KKM: {kkm}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={profilLulusanWithKKM} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="kode" tickLine={false} axisLine={false} />
-              <YAxis domain={[0, 100]} tickLine={false} axisLine={false} />
+          <ResponsiveContainer width="100%" height={350}>
+            <BarChart 
+              data={profilLulusanWithKKM} 
+              layout="vertical"
+              margin={{ top: 5, right: 30, left: 120, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+              <XAxis type="number" domain={[0, 100]} />
+              <YAxis type="category" dataKey="kode" width={70} />
               <Tooltip
                 content={({ active, payload }) => {
                   if (active && payload && payload.length) {
                     const data = payload[0].payload as ProfilLulusanChartData;
                     return (
                       <div className="bg-background border rounded-lg shadow-lg p-3 space-y-1">
-                        <p className="font-bold">{data.kode} - {data.nama}</p>
+                        <p className="font-bold">{data.nama}</p>
                         <p className="text-sm">Persentase: <span className="font-semibold">{data.persentase}%</span></p>
                         <p className="text-sm">Jumlah CPL: {data.jumlah_cpl}</p>
                         <Badge variant={data.persentase >= kkm ? "default" : "destructive"}>
@@ -652,12 +704,25 @@ export default function DashboardPage() {
                   return null;
                 }}
               />
-              <Legend />
-              <ReferenceLine y={kkm} stroke="#ef4444" strokeDasharray="5 5" label={{ value: `KKM: ${kkm}`, fill: '#ef4444', fontSize: 12 }} />
+              <Legend
+                content={() => (
+                  <div className="flex justify-center gap-4 mt-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded" style={{ backgroundColor: "#3b82f6" }} />
+                      <span className="text-sm">Di Atas KKM</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded" style={{ backgroundColor: "#ef4444" }} />
+                      <span className="text-sm">Di Bawah KKM</span>
+                    </div>
+                  </div>
+                )}
+              />
+              <ReferenceLine x={kkm} stroke="#ef4444" strokeDasharray="5 5" label={{ value: `KKM: ${kkm}`, fill: '#ef4444', fontSize: 12 }} />
               <Bar
                 dataKey="persentase"
                 name="Persentase Pencapaian (%)"
-                radius={[4, 4, 0, 0]}
+                radius={[0, 4, 4, 0]}
               >
                 {profilLulusanWithKKM.map((entry, index) => (
                   <Cell
@@ -671,32 +736,36 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Row 3: Grafik CPL/Bahan Kajian */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Grafik CPL (Bahan Kajian) */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Icons.Target size={20} className="text-purple-600" />
+      {/* Row 3: Grafik CPL */}
+      <Card className="shadow-sm hover:shadow-md transition-shadow border-2">
+          <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-b">
+            <CardTitle className="flex items-center gap-3">
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/40 rounded-lg">
+                <Icons.Target size={20} className="text-purple-600 dark:text-purple-400" />
+              </div>
               Grafik Capaian Pembelajaran Lulusan
             </CardTitle>
             <CardDescription>
-              Rata-rata nilai per Bahan Kajian (BK1, BK2, BK3, ...) | KKM: {kkm}
+              Rata-rata nilai per Bahan Kajian | KKM: {kkm}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={cplWithKKM} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="kode" tickLine={false} axisLine={false} />
-                <YAxis domain={[0, 100]} tickLine={false} axisLine={false} />
+            <ResponsiveContainer width="100%" height={400}>
+              <BarChart 
+                data={cplWithKKM} 
+                layout="vertical"
+                margin={{ top: 5, right: 30, left: 150, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                <XAxis type="number" domain={[0, 100]} />
+                <YAxis type="category" dataKey="kode" width={70} />
                 <Tooltip
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       const data = payload[0].payload as CPLChartData;
                       return (
                         <div className="bg-background border rounded-lg shadow-lg p-3 space-y-1">
-                          <p className="font-bold">{data.kode} - {data.nama}</p>
+                          <p className="font-bold">{data.nama}</p>
                           <p className="text-sm">Rata-rata: <span className="font-semibold">{data.rata_rata}</span></p>
                           <p className="text-sm">Jumlah MK: {data.jumlah_mk}</p>
                           <Badge variant={data.rata_rata >= kkm ? "default" : "destructive"}>
@@ -708,8 +777,22 @@ export default function DashboardPage() {
                     return null;
                   }}
                 />
-                <ReferenceLine y={kkm} stroke="#ef4444" strokeDasharray="5 5" />
-                <Bar dataKey="rata_rata" name="Rata-rata Nilai" radius={[4, 4, 0, 0]}>
+                <Legend
+                  content={() => (
+                    <div className="flex justify-center gap-4 mt-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded" style={{ backgroundColor: "#10b981" }} />
+                        <span className="text-sm">Di Atas KKM</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded" style={{ backgroundColor: "#ef4444" }} />
+                        <span className="text-sm">Di Bawah KKM</span>
+                      </div>
+                    </div>
+                  )}
+                />
+                <ReferenceLine x={kkm} stroke="#ef4444" strokeDasharray="5 5" />
+                <Bar dataKey="rata_rata" name="Rata-rata Nilai" radius={[0, 4, 4, 0]}>
                   {cplWithKKM.map((entry, index) => (
                     <Cell
                       key={`cell-${index}`}
@@ -722,30 +805,36 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Grafik Bahan Kajian (Mata Kuliah) */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Icons.Book size={20} className="text-amber-600" />
+      {/* Row 4: Grafik Bahan Kajian */}
+      <Card className="shadow-sm hover:shadow-md transition-shadow border-2">
+          <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-b">
+            <CardTitle className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 dark:bg-green-900/40 rounded-lg">
+                <Icons.Book size={20} className="text-green-600 dark:text-green-400" />
+              </div>
               Grafik Bahan Kajian (Mata Kuliah)
             </CardTitle>
             <CardDescription>
-              Rata-rata nilai per Mata Kuliah (MK1, MK2, MK3, ...) | KKM: {kkm}
+              Rata-rata nilai per Mata Kuliah | KKM: {kkm}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={bkWithKKM} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="kode" tickLine={false} axisLine={false} />
-                <YAxis domain={[0, 100]} tickLine={false} axisLine={false} />
+            <ResponsiveContainer width="100%" height={400}>
+              <BarChart 
+                data={bkWithKKM} 
+                layout="vertical"
+                margin={{ top: 5, right: 30, left: 160, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                <XAxis type="number" domain={[0, 100]} />
+                <YAxis type="category" dataKey="kode" width={70} />
                 <Tooltip
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       const data = payload[0].payload as BahanKajianChartData;
                       return (
                         <div className="bg-background border rounded-lg shadow-lg p-3 space-y-1">
-                          <p className="font-bold">{data.kode} - {data.nama}</p>
+                          <p className="font-bold">{data.nama}</p>
                           <p className="text-sm">Rata-rata: <span className="font-semibold">{data.rata_rata}</span></p>
                           <p className="text-sm">Jumlah Mahasiswa: {data.jumlah_mahasiswa}</p>
                           <Badge variant={data.rata_rata >= kkm ? "default" : "destructive"}>
@@ -757,12 +846,26 @@ export default function DashboardPage() {
                     return null;
                   }}
                 />
-                <ReferenceLine y={kkm} stroke="#ef4444" strokeDasharray="5 5" />
-                <Bar dataKey="rata_rata" name="Rata-rata Nilai" radius={[4, 4, 0, 0]}>
+                <Legend
+                  content={() => (
+                    <div className="flex justify-center gap-4 mt-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded" style={{ backgroundColor: "#10b981" }} />
+                        <span className="text-sm">Di Atas KKM</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded" style={{ backgroundColor: "#ef4444" }} />
+                        <span className="text-sm">Di Bawah KKM</span>
+                      </div>
+                    </div>
+                  )}
+                />
+                <ReferenceLine x={kkm} stroke="#ef4444" strokeDasharray="5 5" />
+                <Bar dataKey="rata_rata" name="Rata-rata Nilai" radius={[0, 4, 4, 0]}>
                   {bkWithKKM.map((entry, index) => (
                     <Cell
                       key={`cell-${index}`}
-                      fill={entry.rata_rata >= kkm ? "#f59e0b" : "#ef4444"}
+                      fill={entry.rata_rata >= kkm ? "#10b981" : "#ef4444"}
                     />
                   ))}
                 </Bar>
@@ -770,282 +873,37 @@ export default function DashboardPage() {
             </ResponsiveContainer>
           </CardContent>
         </Card>
-      </div>
 
-      {/* Row 4: Grafik Mahasiswa di Bawah KKM per MK (Line Chart) + Pie Chart CPMK */}
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Icons.TrendingDown size={20} className="text-red-600" />
-                Mahasiswa di Bawah KKM per Mata Kuliah
-              </CardTitle>
-              <CardDescription>
-                Tren jumlah mahasiswa yang tidak memenuhi KKM ({kkm}) per semester
-              </CardDescription>
-            </div>
-            <div className="w-full sm:w-64">
-              <SearchableSelect
-                options={mataKuliahList}
-                value={selectedMK}
-                onChange={setSelectedMK}
-                placeholder="Pilih Mata Kuliah"
-                searchPlaceholder="Cari MK..."
-                labelKey="nama_mk"
-                valueKey="kode_mk"
-              />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-6 lg:grid-cols-3">
-            {/* Line Chart - Mahasiswa di bawah KKM */}
-            <div className="lg:col-span-2">
-              <h4 className="text-sm font-medium mb-4">
-                {selectedMKData?.nama_mk || "Mata Kuliah"} - Tren Mahasiswa di Bawah KKM
-              </h4>
-              <ResponsiveContainer width="100%" height={280}>
-                <LineChart data={mahasiswaBawahKKM} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="nama_mk" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-                  <YAxis tickLine={false} axisLine={false} />
-                  <Tooltip
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        const data = payload[0].payload as MahasiswaBawahKKMData;
-                        return (
-                          <div className="bg-background border rounded-lg shadow-lg p-3 space-y-1">
-                            <p className="font-bold">{data.nama_mk}</p>
-                            <p className="text-sm text-red-600">Di Bawah KKM: <span className="font-semibold">{data.jumlah_dibawah_kkm}</span></p>
-                            <p className="text-sm">Total Mahasiswa: {data.total_mahasiswa}</p>
-                            <p className="text-sm">Persentase: {data.persentase.toFixed(1)}%</p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="jumlah_dibawah_kkm"
-                    name="Jumlah Mahasiswa di Bawah KKM"
-                    stroke="#ef4444"
-                    strokeWidth={2}
-                    dot={{ fill: "#ef4444", strokeWidth: 2 }}
-                    activeDot={{ r: 6 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Pie Chart - CPMK */}
-            <div>
-              <h4 className="text-sm font-medium mb-4">Rata-rata Nilai per CPMK</h4>
-              <ResponsiveContainer width="100%" height={280}>
-                <PieChart>
-                  <Pie
-                    data={cpmkData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    dataKey="rata_rata"
-                    nameKey="kode_cpmk"
-                    label={({ name, value }) => `${name}: ${value}`}
-                    labelLine={false}
-                  >
-                    {cpmkData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={entry.rata_rata >= kkm ? COLORS[index % COLORS.length] : "#ef4444"}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        const data = payload[0].payload as CPMKRataRataData;
-                        return (
-                          <div className="bg-background border rounded-lg shadow-lg p-3 space-y-1">
-                            <p className="font-bold">{data.kode_cpmk}</p>
-                            <p className="text-sm">Rata-rata: <span className="font-semibold">{data.rata_rata}</span></p>
-                            <p className="text-sm">Jumlah Mahasiswa: {data.jumlah_mahasiswa}</p>
-                            <Badge variant={data.rata_rata >= kkm ? "default" : "destructive"}>
-                              {data.rata_rata >= kkm ? "Di Atas KKM" : "Di Bawah KKM"}
-                            </Badge>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Row 5: Grafik per Mahasiswa */}
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Icons.User size={20} className="text-green-600" />
-                Grafik Nilai per Mahasiswa
-              </CardTitle>
-              <CardDescription>
-                Lihat detail pencapaian nilai setiap mahasiswa per Mata Kuliah
-              </CardDescription>
-            </div>
-            <div className="w-full sm:w-72">
-              <Select value={selectedMahasiswa} onValueChange={setSelectedMahasiswa}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Pilih Mahasiswa" />
-                </SelectTrigger>
-                <SelectContent>
-                  <div className="p-2">
-                    <Input
-                      placeholder="Cari NIM/Nama..."
-                      value={mahasiswaSearch}
-                      onChange={(e) => setMahasiswaSearch(e.target.value)}
-                      className="h-8"
-                    />
-                  </div>
-                  <div className="max-h-60 overflow-y-auto">
-                    {filteredMahasiswa.length === 0 ? (
-                      <div className="p-2 text-sm text-muted-foreground text-center">
-                        Tidak ditemukan
-                      </div>
-                    ) : (
-                      filteredMahasiswa.map((mhs) => (
-                        <SelectItem key={mhs.nim} value={mhs.nim}>
-                          {mhs.nim} - {mhs.nama_mahasiswa}
-                        </SelectItem>
-                      ))
-                    )}
-                  </div>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-6 lg:grid-cols-3">
-            {/* Info Mahasiswa */}
-            <div className="space-y-4">
-              <div className="p-4 bg-muted/50 rounded-lg">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Icons.User size={32} className="text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-lg">{selectedMahasiswaData?.nama_mahasiswa || "-"}</h3>
-                    <p className="text-sm text-muted-foreground">NIM: {selectedMahasiswaData?.nim || "-"}</p>
-                  </div>
-                </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Angkatan:</span>
-                    <span className="font-medium">{selectedMahasiswaData?.angkatan || "-"}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Program Studi:</span>
-                    <span className="font-medium">{selectedMahasiswaData?.prodi || "-"}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Email:</span>
-                    <span className="font-medium">{selectedMahasiswaData?.email || "-"}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Summary */}
-              <div className="p-4 border rounded-lg">
-                <h4 className="font-medium mb-3">Ringkasan Nilai</h4>
-                <div className="space-y-2">
-                  {mahasiswaNilaiChartData.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Belum ada data nilai</p>
-                  ) : (
-                    mahasiswaNilaiChartData.map((mk) => (
-                      <div key={mk.kode_mk} className="flex items-center justify-between text-sm">
-                        <span className="truncate flex-1">{mk.kode_mk}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{mk.nilai_akhir.toFixed(1)}</span>
-                          <Badge variant={mk.status === "Lulus" ? "default" : "destructive"} className="text-xs">
-                            {mk.status}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Chart Nilai per MK */}
-            <div className="lg:col-span-2">
-              <h4 className="text-sm font-medium mb-4">Nilai Akhir per Mata Kuliah</h4>
-              {mahasiswaNilaiChartData.length === 0 ? (
-                <div className="flex items-center justify-center h-64 bg-muted/30 rounded-lg">
-                  <div className="text-center">
-                    <Icons.FileText size={48} className="mx-auto text-muted-foreground/50 mb-2" />
-                    <p className="text-muted-foreground">Belum ada data nilai untuk mahasiswa ini</p>
-                  </div>
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={mahasiswaNilaiChartData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis
-                      dataKey="kode_mk"
-                      tick={{ fontSize: 11 }}
-                      angle={-45}
-                      textAnchor="end"
-                      interval={0}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis domain={[0, 100]} tickLine={false} axisLine={false} />
-                    <Tooltip
-                      content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                          const data = payload[0].payload as MahasiswaNilaiChartItem;
-                          return (
-                            <div className="bg-background border rounded-lg shadow-lg p-3 space-y-1">
-                              <p className="font-bold">{data.kode_mk}</p>
-                              <p className="text-sm text-muted-foreground">{data.nama_mk}</p>
-                              <p className="text-sm">Nilai Akhir: <span className="font-semibold">{data.nilai_akhir.toFixed(1)}</span></p>
-                              <Badge variant={data.status === "Lulus" ? "default" : "destructive"}>
-                                {data.status}
-                              </Badge>
-                            </div>
-                          );
-                        }
-                        return null;
-                      }}
-                    />
-                    <Legend />
-                    <ReferenceLine y={kkm} stroke="#ef4444" strokeDasharray="5 5" label={{ value: `KKM: ${kkm}`, fill: '#ef4444', fontSize: 12 }} />
-                    <Bar dataKey="nilai_akhir" name="Nilai Akhir" radius={[4, 4, 0, 0]}>
-                      {mahasiswaNilaiChartData.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={entry.nilai_akhir >= kkm ? "#10b981" : "#ef4444"}
-                        />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Dialog Konfirmasi Perubahan KKM */}
+      <Dialog open={showKkmDialog} onOpenChange={setShowKkmDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Icons.AlertCircle className="text-amber-500" size={24} />
+              Konfirmasi Perubahan KKM
+            </DialogTitle>
+            <DialogDescription>
+              Anda akan mengubah nilai KKM dari <span className="font-bold text-foreground">{kkm}</span> menjadi <span className="font-bold text-foreground">{inputKkm}</span>.
+              <br />
+              Perubahan ini akan mempengaruhi semua grafik di dashboard.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={cancelKkmChange}
+            >
+              Tidak
+            </Button>
+            <Button
+              onClick={confirmKkmChange}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Ya, Ubah
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -20,6 +20,7 @@ export interface Kurikulum {
   nama_kurikulum: string;
   tahun_berlaku: number;
   is_active: boolean;
+  id_prodi?: string;
   created_at?: Date;
   updated_at?: Date;
 }
@@ -89,6 +90,7 @@ export type KompetensiUtama = KompetensiUtamaLulusan;
 // 6. MATA KULIAH (MK) - 1 Bahan Kajian, Multiple CPL
 // =====================
 export interface MataKuliah {
+  id_mk?: string;
   kode_mk: string;
   nama_mk: string;
   sks: number;
@@ -96,6 +98,7 @@ export interface MataKuliah {
   sifat: SifatMK;
   deskripsi?: string;
   id_kurikulum: string;
+  id_bahan_kajian?: string;
   kurikulum?: Kurikulum;
   bahan_kajian?: BahanKajian;    // Hanya 1 Bahan Kajian
   cpl_list?: CPL[];              // Multiple CPL
@@ -127,6 +130,7 @@ export interface CPMK {
   deskripsi_cpmk: string;
   bobot_persentase: number;
   kode_mk: string;
+  id_mk?: string;
   id_cpl: string;          // Relasi ke CPL
   mata_kuliah?: MataKuliah;
   cpl?: CPL;
@@ -155,6 +159,7 @@ export interface SubCPMK {
 export interface RPS {
   id_rps: string;
   kode_mk: string;
+  id_mk?: string;
   versi: number;
   tgl_penyusunan: Date;
   dosen_pengampu: string;
@@ -277,6 +282,7 @@ export interface DashboardStats {
 // MAHASISWA - Data Mahasiswa
 // =====================
 export interface Mahasiswa {
+  id_mahasiswa?: string;
   nim: string;
   nama_mahasiswa: string;
   angkatan: number;
@@ -286,6 +292,38 @@ export interface Mahasiswa {
   created_at?: Date;
   updated_at?: Date;
 }
+
+// =====================
+// PRODI - Program Studi
+// =====================
+export interface Prodi {
+  id_prodi: string;
+  kode_prodi?: string;
+  nama_prodi: string;
+  fakultas?: string;
+  jenjang?: string;
+  akreditasi?: string;
+  created_at?: Date;
+  updated_at?: Date;
+}
+
+export type ProdiForm = Omit<Prodi, "id_prodi" | "created_at" | "updated_at">;
+
+// =====================
+// PENILAIAN - Data Penilaian per RPS
+// =====================
+export interface Penilaian {
+  id_penilaian: string;
+  id_rps: string;
+  id_pertemuan: string;
+  nama_penilaian: string;
+  bentuk_penilaian: string;
+  bobot_nilai: number;
+  created_at?: Date;
+  updated_at?: Date;
+}
+
+export type PenilaianForm = Omit<Penilaian, "id_penilaian" | "created_at" | "updated_at">;
 
 // =====================
 // NILAI MAHASISWA - Nilai per CPMK/Sub-CPMK

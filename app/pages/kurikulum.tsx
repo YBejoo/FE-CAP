@@ -30,31 +30,9 @@ import {
 } from "~/components/ui";
 import type { Kurikulum } from "~/types";
 import { TAHUN_OPTIONS } from "~/lib/constants";
+import { useKurikulum } from "~/hooks/useKurikulum";
+import { useProdi } from "~/hooks/useProdi";
 
-// Dummy data
-const initialKurikulums: Kurikulum[] = [
-  {
-    id_kurikulum: "1",
-    nama_kurikulum: "Kurikulum OBE 2024",
-    tahun_berlaku: 2024,
-    is_active: true,
-    created_at: new Date("2024-01-15"),
-  },
-  {
-    id_kurikulum: "2",
-    nama_kurikulum: "Kurikulum KKNI 2020",
-    tahun_berlaku: 2020,
-    is_active: true,
-    created_at: new Date("2020-02-10"),
-  },
-  {
-    id_kurikulum: "3",
-    nama_kurikulum: "Kurikulum 2016",
-    tahun_berlaku: 2016,
-    is_active: false,
-    created_at: new Date("2016-03-05"),
-  },
-];
 
 // Status Badge Component
 function StatusBadge({ isActive }: { isActive: boolean }) {
@@ -66,7 +44,15 @@ function StatusBadge({ isActive }: { isActive: boolean }) {
 }
 
 export default function KurikulumPage() {
-  const [kurikulums, setKurikulums] = useState<Kurikulum[]>(initialKurikulums);
+  const {
+    kurikulums,
+    loading,
+    createKurikulum,
+    updateKurikulum,
+    activateKurikulum,
+    deleteKurikulum,
+  } = useKurikulum();
+  const { data: prodiList, loading: prodiLoading } = useProdi();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -78,6 +64,7 @@ export default function KurikulumPage() {
   const [formData, setFormData] = useState({
     nama_kurikulum: "",
     tahun_berlaku: new Date().getFullYear().toString(),
+    id_prodi: "",
   });
 
   // Filter kurikulum
@@ -93,62 +80,70 @@ export default function KurikulumPage() {
   });
 
   // Handle form submit
-  const handleSubmit = () => {
-    if (editingKurikulum) {
-      // Edit mode
-      setKurikulums((prev) =>
-        prev.map((k) =>
-          k.id_kurikulum === editingKurikulum.id_kurikulum
-            ? {
-                ...k,
-                nama_kurikulum: formData.nama_kurikulum,
-                tahun_berlaku: parseInt(formData.tahun_berlaku),
-              }
-            : k
-        )
-      );
-    } else {
-      // Add mode
-      const newKurikulum: Kurikulum = {
-        id_kurikulum: Date.now().toString(),
-        nama_kurikulum: formData.nama_kurikulum,
-        tahun_berlaku: parseInt(formData.tahun_berlaku),
-        is_active: false,
-        created_at: new Date(),
-      };
-      setKurikulums((prev) => [...prev, newKurikulum]);
+  const handleSubmit = async () => {
+    console.log("handleSubmit called", formData);
+    
+    if (!formData.nama_kurikulum.trim()) {
+      alert("Nama kurikulum harus diisi.");
+      return;
     }
-    handleCloseDialog();
+    
+    const prodiId = formData.id_prodi || prodiList[0]?.id_prodi;
+    if (!prodiId) {
+      alert("Pilih Program Studi terlebih dahulu. Tambahkan data Prodi jika belum ada.");
+      return;
+    }
+    
+    try {
+      if (editingKurikulum) {
+        await updateKurikulum(editingKurikulum.id_kurikulum, {
+          nama_kurikulum: formData.nama_kurikulum,
+          tahun_berlaku: parseInt(formData.tahun_berlaku),
+          id_prodi: prodiId,
+        });
+      } else {
+        await createKurikulum({
+          nama_kurikulum: formData.nama_kurikulum,
+          tahun_berlaku: parseInt(formData.tahun_berlaku),
+          is_active: false,
+          id_prodi: prodiId,
+        });
+      }
+      handleCloseDialog();
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      alert("Terjadi kesalahan saat menyimpan data.");
+    }
   };
 
   // Handle toggle active (bisa lebih dari 1 kurikulum aktif)
-  const handleToggleActive = (id: string) => {
-    setKurikulums((prev) =>
-      prev.map((k) => ({
-        ...k,
-        is_active: k.id_kurikulum === id ? !k.is_active : k.is_active,
-      }))
-    );
+  const handleToggleActive = async (id: string) => {
+    console.log("handleToggleActive called with id:", id);
+    const target = kurikulums.find((k) => k.id_kurikulum === id);
+    if (!target) return;
+    if (!target.is_active) {
+      await activateKurikulum(id);
+    } else {
+      await updateKurikulum(id, { is_active: false });
+    }
   };
 
   // Handle copy/duplicate
-  const handleCopy = (kurikulum: Kurikulum) => {
-    const newKurikulum: Kurikulum = {
-      id_kurikulum: Date.now().toString(),
+  const handleCopy = async (kurikulum: Kurikulum) => {
+    console.log("handleCopy called with:", kurikulum);
+    await createKurikulum({
       nama_kurikulum: `${kurikulum.nama_kurikulum} (Copy)`,
       tahun_berlaku: new Date().getFullYear(),
       is_active: false,
-      created_at: new Date(),
-    };
-    setKurikulums((prev) => [...prev, newKurikulum]);
+      id_prodi: kurikulum.id_prodi,
+    });
   };
 
   // Handle delete
-  const handleDelete = () => {
+  const handleDelete = async () => {
+    console.log("handleDelete called");
     if (deletingKurikulum) {
-      setKurikulums((prev) =>
-        prev.filter((k) => k.id_kurikulum !== deletingKurikulum.id_kurikulum)
-      );
+      await deleteKurikulum(deletingKurikulum.id_kurikulum);
       setIsDeleteDialogOpen(false);
       setDeletingKurikulum(null);
     }
@@ -156,17 +151,20 @@ export default function KurikulumPage() {
 
   // Open dialog for add/edit
   const openDialog = (kurikulum?: Kurikulum) => {
+    console.log("openDialog called with:", kurikulum);
     if (kurikulum) {
       setEditingKurikulum(kurikulum);
       setFormData({
         nama_kurikulum: kurikulum.nama_kurikulum,
         tahun_berlaku: kurikulum.tahun_berlaku.toString(),
+        id_prodi: kurikulum.id_prodi || "",
       });
     } else {
       setEditingKurikulum(null);
       setFormData({
         nama_kurikulum: "",
         tahun_berlaku: new Date().getFullYear().toString(),
+        id_prodi: prodiList[0]?.id_prodi || "",
       });
     }
     setIsDialogOpen(true);
@@ -179,11 +177,23 @@ export default function KurikulumPage() {
     setFormData({
       nama_kurikulum: "",
       tahun_berlaku: new Date().getFullYear().toString(),
+      id_prodi: prodiList[0]?.id_prodi || "",
     });
   };
 
+  if (loading || prodiLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <Icons.Loader className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
         {/* Action Bar */}
         <Card>
           <CardContent className="p-4">
@@ -214,7 +224,17 @@ export default function KurikulumPage() {
               </div>
 
               {/* Add Button */}
-              <Button onClick={() => openDialog()}>
+              <Button 
+                type="button" 
+                onClick={() => {
+                  console.log("Tambah Kurikulum clicked, prodiList:", prodiList);
+                  if (prodiList.length === 0) {
+                    alert("Silakan tambahkan data Program Studi terlebih dahulu di menu Prodi.");
+                    return;
+                  }
+                  openDialog();
+                }}
+              >
                 <Icons.Plus size={16} className="mr-2" />
                 Tambah Kurikulum
               </Button>
@@ -261,41 +281,63 @@ export default function KurikulumPage() {
                         <StatusBadge isActive={kurikulum.is_active} />
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-2" style={{ position: 'relative', zIndex: 1 }}>
                           <Button
+                            type="button"
                             variant="ghost"
                             size="sm"
-                            onClick={() => openDialog(kurikulum)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              console.log("Edit button clicked");
+                              openDialog(kurikulum);
+                            }}
+                            style={{ cursor: 'pointer' }}
                           >
                             <Icons.Edit size={14} className="mr-1" />
                             Edit
                           </Button>
                           <Button
+                            type="button"
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleCopy(kurikulum)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              console.log("Copy button clicked");
+                              handleCopy(kurikulum);
+                            }}
+                            style={{ cursor: 'pointer' }}
                           >
                             <Icons.Copy size={14} className="mr-1" />
                             Salin
                           </Button>
                           <Button
+                            type="button"
                             variant="ghost"
                             size="sm"
                             className={kurikulum.is_active ? "text-green-600 hover:text-green-700" : "text-orange-600 hover:text-orange-700"}
-                            onClick={() => handleToggleActive(kurikulum.id_kurikulum)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              console.log("Toggle active button clicked");
+                              handleToggleActive(kurikulum.id_kurikulum);
+                            }}
+                            style={{ cursor: 'pointer' }}
                           >
                             <Icons.Power size={14} className="mr-1" />
                             {kurikulum.is_active ? "Nonaktifkan" : "Aktifkan"}
                           </Button>
                           {!kurikulum.is_active && (
                             <Button
+                              type="button"
                               variant="ghost"
                               size="sm"
                               className="text-destructive hover:text-destructive"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                console.log("Delete button clicked");
                                 setDeletingKurikulum(kurikulum);
                                 setIsDeleteDialogOpen(true);
                               }}
+                              style={{ cursor: 'pointer' }}
                             >
                               <Icons.Trash size={14} />
                             </Button>
@@ -360,15 +402,43 @@ export default function KurikulumPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <Label>Program Studi</Label>
+              <Select
+                value={formData.id_prodi}
+                onValueChange={(value) =>
+                  setFormData((prev) => ({ ...prev, id_prodi: value }))
+                }
+                disabled={prodiList.length === 0}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih Prodi" />
+                </SelectTrigger>
+                <SelectContent>
+                  {prodiList.map((prodi) => (
+                    <SelectItem key={prodi.id_prodi} value={prodi.id_prodi}>
+                      {prodi.nama_prodi}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {prodiList.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Tambahkan data prodi terlebih dahulu.
+                </p>
+              )}
+            </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={handleCloseDialog}>
+            <Button type="button" variant="outline" onClick={handleCloseDialog}>
               Batal
             </Button>
             <Button
+              type="button"
               onClick={handleSubmit}
-              disabled={!formData.nama_kurikulum.trim()}
+              disabled={!formData.nama_kurikulum.trim() || !formData.id_prodi}
             >
               {editingKurikulum ? "Simpan Perubahan" : "Tambah"}
             </Button>
@@ -389,12 +459,13 @@ export default function KurikulumPage() {
           </DialogHeader>
           <DialogFooter>
             <Button
+              type="button"
               variant="outline"
               onClick={() => setIsDeleteDialogOpen(false)}
             >
               Batal
             </Button>
-            <Button variant="destructive" onClick={handleDelete}>
+            <Button type="button" variant="destructive" onClick={handleDelete}>
               Hapus
             </Button>
           </DialogFooter>

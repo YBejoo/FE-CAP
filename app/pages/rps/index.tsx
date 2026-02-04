@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Card,
   CardContent,
@@ -23,90 +23,9 @@ import {
 } from "~/components/ui";
 import type { RPS } from "~/types";
 import { STATUS_RPS_OPTIONS } from "~/lib/constants";
+import { useRps } from "~/hooks/useRps";
+import { useMataKuliah } from "~/hooks/useMataKuliah";
 
-// Dummy RPS data
-const initialRPSList: RPS[] = [
-  {
-    id_rps: "1",
-    kode_mk: "INF101",
-    versi: 1,
-    tgl_penyusunan: new Date("2024-08-15"),
-    dosen_pengampu: "Dr. Andi Wijaya, M.Kom",
-    status: "Terbit",
-    mata_kuliah: {
-      kode_mk: "INF101",
-      nama_mk: "Pemrograman Dasar",
-      sks: 3,
-      semester: 1,
-      sifat: "Wajib",
-      id_kurikulum: "1",
-    },
-  },
-  {
-    id_rps: "2",
-    kode_mk: "INF102",
-    versi: 1,
-    tgl_penyusunan: new Date("2024-08-20"),
-    dosen_pengampu: "Ir. Budi Santoso, M.Kom",
-    status: "Terbit",
-    mata_kuliah: {
-      kode_mk: "INF102",
-      nama_mk: "Struktur Data",
-      sks: 3,
-      semester: 2,
-      sifat: "Wajib",
-      id_kurikulum: "1",
-    },
-  },
-  {
-    id_rps: "3",
-    kode_mk: "INF201",
-    versi: 2,
-    tgl_penyusunan: new Date("2024-09-01"),
-    dosen_pengampu: "Dr. Citra Dewi, M.T.",
-    status: "Menunggu Validasi",
-    mata_kuliah: {
-      kode_mk: "INF201",
-      nama_mk: "Basis Data",
-      sks: 3,
-      semester: 3,
-      sifat: "Wajib",
-      id_kurikulum: "1",
-    },
-  },
-  {
-    id_rps: "4",
-    kode_mk: "INF301",
-    versi: 1,
-    tgl_penyusunan: new Date("2024-09-10"),
-    dosen_pengampu: "Dian Pratama, S.Kom, M.T.",
-    status: "Draft",
-    mata_kuliah: {
-      kode_mk: "INF301",
-      nama_mk: "Pemrograman Web",
-      sks: 3,
-      semester: 4,
-      sifat: "Wajib",
-      id_kurikulum: "1",
-    },
-  },
-  {
-    id_rps: "5",
-    kode_mk: "INF302",
-    versi: 1,
-    tgl_penyusunan: new Date("2024-09-12"),
-    dosen_pengampu: "Eko Susanto, M.Kom",
-    status: "Draft",
-    mata_kuliah: {
-      kode_mk: "INF302",
-      nama_mk: "Jaringan Komputer",
-      sks: 3,
-      semester: 4,
-      sifat: "Wajib",
-      id_kurikulum: "1",
-    },
-  },
-];
 
 // Status Badge Component
 function StatusBadge({ status }: { status: string }) {
@@ -126,12 +45,21 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function RPSListPage() {
-  const [rpsList, setRPSList] = useState<RPS[]>(initialRPSList);
+  const { rpsList, loading } = useRps();
+  const { mataKuliahList, loading: mkLoading } = useMataKuliah();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
+  const rpsListWithMK = useMemo<RPS[]>(() => {
+    return rpsList.map((rps) => {
+      if (rps.mata_kuliah) return rps;
+      const mk = mataKuliahList.find((item) => item.kode_mk === rps.kode_mk);
+      return mk ? { ...rps, mata_kuliah: mk } : rps;
+    });
+  }, [rpsList, mataKuliahList]);
+
   // Filter RPS
-  const filteredRPS = rpsList.filter((rps) => {
+  const filteredRPS = rpsListWithMK.filter((rps) => {
     const matchSearch =
       rps.mata_kuliah?.nama_mk.toLowerCase().includes(searchTerm.toLowerCase()) ||
       rps.kode_mk.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -142,11 +70,22 @@ export default function RPSListPage() {
 
   // Stats
   const stats = {
-    total: rpsList.length,
-    terbit: rpsList.filter((r) => r.status === "Terbit").length,
-    validasi: rpsList.filter((r) => r.status === "Menunggu Validasi").length,
-    draft: rpsList.filter((r) => r.status === "Draft").length,
+    total: rpsListWithMK.length,
+    terbit: rpsListWithMK.filter((r) => r.status === "Terbit").length,
+    validasi: rpsListWithMK.filter((r) => r.status === "Menunggu Validasi").length,
+    draft: rpsListWithMK.filter((r) => r.status === "Draft").length,
   };
+
+  if (loading || mkLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <Icons.Loader className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -213,7 +152,7 @@ export default function RPSListPage() {
                   />
                 </div>
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectTrigger className="w-full sm:w-45">
                     <SelectValue placeholder="Filter Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -248,13 +187,13 @@ export default function RPSListPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[100px]">Kode MK</TableHead>
+                  <TableHead className="w-25">Kode MK</TableHead>
                   <TableHead>Mata Kuliah</TableHead>
                   <TableHead>Dosen Pengampu</TableHead>
-                  <TableHead className="w-[80px] text-center">Versi</TableHead>
-                  <TableHead className="w-[140px]">Status</TableHead>
-                  <TableHead className="w-[120px]">Tanggal</TableHead>
-                  <TableHead className="w-[150px] text-right">Aksi</TableHead>
+                  <TableHead className="w-20 text-center">Versi</TableHead>
+                  <TableHead className="w-35">Status</TableHead>
+                  <TableHead className="w-30">Tanggal</TableHead>
+                  <TableHead className="w-37.5 text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

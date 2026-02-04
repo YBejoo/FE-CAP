@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Header } from "~/components/header";
 import {
   Badge,
@@ -25,13 +25,8 @@ import {
 } from "~/components/ui";
 import { BENTUK_PENILAIAN_OPTIONS } from "~/lib/constants";
 import type { Penilaian } from "~/types";
-
-// Dummy RPS options
-const rpsOptions = [
-  { value: "RPS-001", label: "RPS-001 - Algoritma dan Pemrograman" },
-  { value: "RPS-002", label: "RPS-002 - Basis Data" },
-  { value: "RPS-003", label: "RPS-003 - Pemrograman Web" },
-];
+import { usePenilaian } from "~/hooks/usePenilaian";
+import { useRps } from "~/hooks/useRps";
 
 // Dummy pertemuan options
 const pertemuanOptions = [
@@ -42,16 +37,15 @@ const pertemuanOptions = [
   { value: "P16", label: "Pertemuan 16 - UAS" },
 ];
 
-const initialData: Penilaian[] = [
-  { id_penilaian: "PN-001", bobot_nilai: 20, id_rps: "RPS-001", id_pertemuan: "P1", nama_penilaian: "Tugas 1", bentuk_penilaian: "tugas" },
-  { id_penilaian: "PN-002", bobot_nilai: 15, id_rps: "RPS-001", id_pertemuan: "P2", nama_penilaian: "Kuis 1", bentuk_penilaian: "kuis" },
-  { id_penilaian: "PN-003", bobot_nilai: 25, id_rps: "RPS-001", id_pertemuan: "P8", nama_penilaian: "UTS", bentuk_penilaian: "uts" },
-  { id_penilaian: "PN-004", bobot_nilai: 15, id_rps: "RPS-001", id_pertemuan: "P3", nama_penilaian: "Praktikum 1", bentuk_penilaian: "praktikum" },
-  { id_penilaian: "PN-005", bobot_nilai: 25, id_rps: "RPS-001", id_pertemuan: "P16", nama_penilaian: "UAS", bentuk_penilaian: "uas" },
-];
-
 export default function PenilaianPage() {
-  const [data, setData] = useState<Penilaian[]>(initialData);
+  const {
+    data,
+    loading,
+    createPenilaian,
+    updatePenilaian,
+    deletePenilaian,
+  } = usePenilaian();
+  const { rpsList, loading: rpsLoading } = useRps();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Penilaian | null>(null);
   const [formData, setFormData] = useState({
@@ -69,36 +63,24 @@ export default function PenilaianPage() {
 
   const totalBobot = filteredData.reduce((sum, item) => sum + item.bobot_nilai, 0);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (editingItem) {
-      setData(
-        data.map((item) =>
-          item.id_penilaian === editingItem.id_penilaian
-            ? {
-                ...item,
-                id_rps: formData.id_rps,
-                id_pertemuan: formData.id_pertemuan,
-                nama_penilaian: formData.nama_penilaian,
-                bentuk_penilaian: formData.bentuk_penilaian,
-                bobot_nilai: parseInt(formData.bobot_nilai),
-              }
-            : item
-        )
-      );
+      await updatePenilaian(editingItem.id_penilaian, {
+        id_rps: formData.id_rps,
+        id_pertemuan: formData.id_pertemuan,
+        nama_penilaian: formData.nama_penilaian,
+        bentuk_penilaian: formData.bentuk_penilaian,
+        bobot_nilai: parseInt(formData.bobot_nilai),
+      });
     } else {
-      const newId = `PN-${String(data.length + 1).padStart(3, "0")}`;
-      setData([
-        ...data,
-        {
-          id_penilaian: newId,
-          id_rps: formData.id_rps,
-          id_pertemuan: formData.id_pertemuan,
-          nama_penilaian: formData.nama_penilaian,
-          bentuk_penilaian: formData.bentuk_penilaian,
-          bobot_nilai: parseInt(formData.bobot_nilai),
-        },
-      ]);
+      await createPenilaian({
+        id_rps: formData.id_rps,
+        id_pertemuan: formData.id_pertemuan,
+        nama_penilaian: formData.nama_penilaian,
+        bentuk_penilaian: formData.bentuk_penilaian,
+        bobot_nilai: parseInt(formData.bobot_nilai),
+      });
     }
     handleCloseDialog();
   };
@@ -115,9 +97,9 @@ export default function PenilaianPage() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm("Apakah Anda yakin ingin menghapus data ini?")) {
-      setData(data.filter((item) => item.id_penilaian !== id));
+      await deletePenilaian(id);
     }
   };
 
@@ -150,6 +132,22 @@ export default function PenilaianPage() {
         return "outline";
     }
   };
+
+  const rpsOptions = useMemo(
+    () => rpsList.map((rps) => ({ value: rps.id_rps, label: `${rps.id_rps} - ${rps.kode_mk}` })),
+    [rpsList]
+  );
+
+  if (loading || rpsLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <Icons.Loader className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

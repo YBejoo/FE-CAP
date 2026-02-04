@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -25,21 +25,9 @@ import {
 } from "~/components/ui";
 import type { MataKuliah, CPL, CPMK, SubCPMK } from "~/types";
 import { METODE_PEMBELAJARAN_OPTIONS } from "~/lib/constants";
+import { useMataKuliah } from "~/hooks/useMataKuliah";
+import { useCpl } from "~/hooks/useCpl";
 
-// Dummy MK for selection
-const dummyMataKuliah: MataKuliah[] = [
-  { kode_mk: "INF301", nama_mk: "Pemrograman Web", sks: 3, semester: 4, sifat: "Wajib", id_kurikulum: "1" },
-  { kode_mk: "INF302", nama_mk: "Jaringan Komputer", sks: 3, semester: 4, sifat: "Wajib", id_kurikulum: "1" },
-  { kode_mk: "INF401", nama_mk: "Keamanan Sistem", sks: 3, semester: 5, sifat: "Pilihan", id_kurikulum: "1" },
-];
-
-// Dummy CPL (filtered by MK mapping)
-const dummyCPLs: CPL[] = [
-  { id_cpl: "1", kode_cpl: "P1", aspek: "Pengetahuan", deskripsi_cpl: "Menguasai konsep teoritis bidang TI", id_kurikulum: "1" },
-  { id_cpl: "2", kode_cpl: "P2", aspek: "Pengetahuan", deskripsi_cpl: "Menguasai prinsip rekayasa perangkat lunak", id_kurikulum: "1" },
-  { id_cpl: "3", kode_cpl: "KK1", aspek: "Keterampilan Khusus", deskripsi_cpl: "Mampu merancang sistem informasi", id_kurikulum: "1" },
-  { id_cpl: "4", kode_cpl: "KK2", aspek: "Keterampilan Khusus", deskripsi_cpl: "Mampu mengembangkan aplikasi", id_kurikulum: "1" },
-];
 
 const steps = [
   { id: 1, title: "Identitas & Pustaka", icon: Icons.FileText },
@@ -52,9 +40,11 @@ const steps = [
 function IdentitasForm({
   data,
   onChange,
+  mataKuliahList,
 }: {
   data: any;
   onChange: (data: any) => void;
+  mataKuliahList: MataKuliah[];
 }) {
   return (
     <div className="space-y-6">
@@ -69,7 +59,7 @@ function IdentitasForm({
               <SelectValue placeholder="Pilih Mata Kuliah" />
             </SelectTrigger>
             <SelectContent>
-              {dummyMataKuliah.map((mk) => (
+              {mataKuliahList.map((mk) => (
                 <SelectItem key={mk.kode_mk} value={mk.kode_mk}>
                   {mk.kode_mk} - {mk.nama_mk}
                 </SelectItem>
@@ -170,9 +160,11 @@ function IdentitasForm({
 function CPMKMappingForm({
   data,
   onChange,
+  cplList,
 }: {
   data: any;
   onChange: (data: any) => void;
+  cplList: CPL[];
 }) {
   const addCPMK = () => {
     const newCPMK: CPMK = {
@@ -214,7 +206,7 @@ function CPMKMappingForm({
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2">
-            {dummyCPLs.map((cpl) => (
+            {cplList.map((cpl) => (
               <div
                 key={cpl.id_cpl}
                 className="p-3 rounded-lg border bg-accent/50"
@@ -309,7 +301,7 @@ function CPMKMappingForm({
                               <SelectValue placeholder="Pilih CPL" />
                             </SelectTrigger>
                             <SelectContent>
-                              {dummyCPLs.map((cpl) => (
+                              {cplList.map((cpl) => (
                                 <SelectItem key={cpl.id_cpl} value={cpl.id_cpl}>
                                   {cpl.kode_cpl}
                                 </SelectItem>
@@ -666,6 +658,8 @@ function WeeklyScheduleForm({
 }
 
 export default function RPSEditorPage() {
+  const { mataKuliahList, loading: mkLoading } = useMataKuliah();
+  const { cplList, loading: cplLoading } = useCpl();
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     // Step 1: Identitas
@@ -714,9 +708,20 @@ export default function RPSEditorPage() {
     alert("RPS berhasil dipublikasikan!");
   };
 
-  const selectedMK = dummyMataKuliah.find(
+  const selectedMK = mataKuliahList.find(
     (mk) => mk.kode_mk === formData.kode_mk
   );
+
+  if (mkLoading || cplLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <Icons.Loader className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -793,10 +798,18 @@ export default function RPSEditorPage() {
           </CardHeader>
           <CardContent className="min-h-96">
             {currentStep === 1 && (
-              <IdentitasForm data={formData} onChange={setFormData} />
+              <IdentitasForm
+                data={formData}
+                onChange={setFormData}
+                mataKuliahList={mataKuliahList}
+              />
             )}
             {currentStep === 2 && (
-              <CPMKMappingForm data={formData} onChange={setFormData} />
+              <CPMKMappingForm
+                data={formData}
+                onChange={setFormData}
+                cplList={cplList}
+              />
             )}
             {currentStep === 3 && (
               <SubCPMKForm data={formData} onChange={setFormData} />

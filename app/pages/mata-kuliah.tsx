@@ -31,134 +31,11 @@ import {
 } from "~/components/ui";
 import type { MataKuliah, BahanKajian, SifatMK, CPL, AspekKUL, Dosen } from "~/types";
 import { SEMESTER_OPTIONS, SIFAT_MK_OPTIONS, ASPEK_KUL_OPTIONS } from "~/lib/constants";
+import { useBahanKajian } from "~/hooks/useBahanKajian";
+import { useCpl } from "~/hooks/useCpl";
+import { useDosen } from "~/hooks/useDosen";
+import { useMataKuliah } from "~/hooks/useMataKuliah";
 
-// Dummy Dosen data
-const dummyDosen: Dosen[] = [
-  { id_dosen: "1", nip: "198501012010011001", nama_dosen: "Dr. Ahmad Susanto, M.Kom", bidang_keahlian: "Algoritma dan Pemrograman", jabatan_fungsional: "Lektor Kepala" },
-  { id_dosen: "2", nip: "198702152012012002", nama_dosen: "Dr. Budi Prasetyo, M.T.", bidang_keahlian: "Basis Data", jabatan_fungsional: "Lektor" },
-  { id_dosen: "3", nip: "199003252015011003", nama_dosen: "Citra Dewi, S.Kom., M.Cs.", bidang_keahlian: "Pengembangan Web", jabatan_fungsional: "Asisten Ahli" },
-  { id_dosen: "4", nip: "198805102013021004", nama_dosen: "Dedi Firmansyah, S.T., M.Kom.", bidang_keahlian: "Jaringan Komputer", jabatan_fungsional: "Lektor" },
-  { id_dosen: "5", nip: "199108302017031005", nama_dosen: "Eka Putri, S.Kom., M.Kom.", bidang_keahlian: "Rekayasa Perangkat Lunak", jabatan_fungsional: "Asisten Ahli" },
-  { id_dosen: "6", nip: "198612182011011006", nama_dosen: "Dr. Fajar Hidayat, M.Kom.", bidang_keahlian: "Kecerdasan Buatan", jabatan_fungsional: "Lektor Kepala" },
-  { id_dosen: "7", nip: "199205152019012007", nama_dosen: "Gita Sari, S.Kom., M.T.", bidang_keahlian: "Sistem Informasi", jabatan_fungsional: "Asisten Ahli" },
-  { id_dosen: "8", nip: "198909222014031008", nama_dosen: "Hendra Wijaya, S.T., M.Kom.", bidang_keahlian: "Keamanan Siber", jabatan_fungsional: "Lektor" },
-];
-
-// Dummy CPL data
-const dummyCPL: CPL[] = [
-  { id_cpl: "1", kode_cpl: "S1", aspek: "S", deskripsi_cpl: "Bertakwa kepada Tuhan YME", id_kurikulum: "1" },
-  { id_cpl: "2", kode_cpl: "S2", aspek: "S", deskripsi_cpl: "Menjunjung tinggi nilai kemanusiaan", id_kurikulum: "1" },
-  { id_cpl: "3", kode_cpl: "P1", aspek: "P", deskripsi_cpl: "Menguasai konsep teoretis bidang TI", id_kurikulum: "1" },
-  { id_cpl: "4", kode_cpl: "P2", aspek: "P", deskripsi_cpl: "Menguasai prinsip rekayasa perangkat lunak", id_kurikulum: "1" },
-  { id_cpl: "5", kode_cpl: "KU1", aspek: "KU", deskripsi_cpl: "Mampu menerapkan pemikiran logis dan kritis", id_kurikulum: "1" },
-  { id_cpl: "6", kode_cpl: "KU2", aspek: "KU", deskripsi_cpl: "Mampu menunjukkan kinerja mandiri", id_kurikulum: "1" },
-  { id_cpl: "7", kode_cpl: "KK1", aspek: "KK", deskripsi_cpl: "Mampu merancang sistem informasi", id_kurikulum: "1" },
-  { id_cpl: "8", kode_cpl: "KK2", aspek: "KK", deskripsi_cpl: "Mampu mengembangkan aplikasi web dan mobile", id_kurikulum: "1" },
-];
-
-// Dummy Bahan Kajian
-const dummyBahanKajian: BahanKajian[] = [
-  { id_bahan_kajian: "1", kode_bk: "BK-01", nama_bahan_kajian: "Algoritma dan Pemrograman", aspek: "P", ranah_keilmuan: "Ilmu Komputer Dasar", id_kurikulum: "1" },
-  { id_bahan_kajian: "2", kode_bk: "BK-02", nama_bahan_kajian: "Struktur Data", aspek: "P", ranah_keilmuan: "Ilmu Komputer Dasar", id_kurikulum: "1" },
-  { id_bahan_kajian: "3", kode_bk: "BK-03", nama_bahan_kajian: "Basis Data", aspek: "KK", ranah_keilmuan: "Sistem Informasi", id_kurikulum: "1" },
-  { id_bahan_kajian: "4", kode_bk: "BK-04", nama_bahan_kajian: "Jaringan Komputer", aspek: "KK", ranah_keilmuan: "Infrastruktur TI", id_kurikulum: "1" },
-  { id_bahan_kajian: "5", kode_bk: "BK-05", nama_bahan_kajian: "Rekayasa Perangkat Lunak", aspek: "KK", ranah_keilmuan: "Pengembangan Perangkat Lunak", id_kurikulum: "1" },
-  { id_bahan_kajian: "6", kode_bk: "BK-06", nama_bahan_kajian: "Pengembangan Web", aspek: "KK", ranah_keilmuan: "Pengembangan Aplikasi", id_kurikulum: "1" },
-  { id_bahan_kajian: "7", kode_bk: "BK-07", nama_bahan_kajian: "Etika Profesi TI", aspek: "S", ranah_keilmuan: "Etika dan Profesionalisme", id_kurikulum: "1" },
-  { id_bahan_kajian: "8", kode_bk: "BK-08", nama_bahan_kajian: "Manajemen Proyek TI", aspek: "KU", ranah_keilmuan: "Manajemen", id_kurikulum: "1" },
-];
-
-// Dummy Mata Kuliah (1 BK, multiple CPL)
-const initialMataKuliah: MataKuliah[] = [
-  {
-    kode_mk: "INF101",
-    nama_mk: "Pemrograman Dasar",
-    sks: 3,
-    semester: 1,
-    sifat: "Wajib",
-    deskripsi: "Pengantar konsep pemrograman komputer",
-    id_kurikulum: "1",
-    bahan_kajian: dummyBahanKajian[0], // BK-01
-    cpl_list: [dummyCPL[2], dummyCPL[4]], // P1, KU1
-  },
-  {
-    kode_mk: "INF102",
-    nama_mk: "Struktur Data",
-    sks: 3,
-    semester: 2,
-    sifat: "Wajib",
-    deskripsi: "Konsep dan implementasi struktur data",
-    id_kurikulum: "1",
-    bahan_kajian: dummyBahanKajian[1], // BK-02
-    cpl_list: [dummyCPL[2], dummyCPL[4], dummyCPL[6]], // P1, KU1, KK1
-  },
-  {
-    kode_mk: "INF201",
-    nama_mk: "Basis Data",
-    sks: 3,
-    semester: 3,
-    sifat: "Wajib",
-    deskripsi: "Perancangan dan implementasi basis data",
-    id_kurikulum: "1",
-    bahan_kajian: dummyBahanKajian[2], // BK-03
-    cpl_list: [dummyCPL[3], dummyCPL[6]], // P2, KK1
-  },
-  {
-    kode_mk: "INF301",
-    nama_mk: "Pemrograman Web",
-    sks: 3,
-    semester: 4,
-    sifat: "Wajib",
-    deskripsi: "Pengembangan aplikasi berbasis web",
-    id_kurikulum: "1",
-    bahan_kajian: dummyBahanKajian[5], // BK-06
-    cpl_list: [dummyCPL[6], dummyCPL[7]], // KK1, KK2
-  },
-  {
-    kode_mk: "INF302",
-    nama_mk: "Jaringan Komputer",
-    sks: 3,
-    semester: 4,
-    sifat: "Wajib",
-    deskripsi: "Konsep dan implementasi jaringan komputer",
-    id_kurikulum: "1",
-    bahan_kajian: dummyBahanKajian[3], // BK-04
-    cpl_list: [dummyCPL[3], dummyCPL[6]], // P2, KK1
-  },
-  {
-    kode_mk: "INF401",
-    nama_mk: "Rekayasa Perangkat Lunak",
-    sks: 3,
-    semester: 5,
-    sifat: "Wajib",
-    deskripsi: "Metodologi pengembangan perangkat lunak",
-    id_kurikulum: "1",
-    bahan_kajian: dummyBahanKajian[4], // BK-05
-    cpl_list: [dummyCPL[3], dummyCPL[5], dummyCPL[6]], // P2, KU2, KK1
-  },
-  {
-    kode_mk: "INF402",
-    nama_mk: "Etika Profesi",
-    sks: 2,
-    semester: 6,
-    sifat: "Wajib",
-    deskripsi: "Etika dan profesionalisme di bidang TI",
-    id_kurikulum: "1",
-    bahan_kajian: dummyBahanKajian[6], // BK-07
-    cpl_list: [dummyCPL[0], dummyCPL[1]], // S1, S2
-  },
-  {
-    kode_mk: "INF403",
-    nama_mk: "Manajemen Proyek TI",
-    sks: 3,
-    semester: 7,
-    sifat: "Pilihan",
-    deskripsi: "Pengelolaan proyek teknologi informasi",
-    id_kurikulum: "1",
-    bahan_kajian: dummyBahanKajian[7], // BK-08
-    cpl_list: [dummyCPL[4], dummyCPL[5]], // KU1, KU2
-  },
-];
 
 // Aspek Badge Component
 function AspekBadge({ aspek }: { aspek: AspekKUL }) {
@@ -186,10 +63,16 @@ function CPLTag({ cpl }: { cpl: CPL }) {
 }
 
 export default function MataKuliahPage() {
-  const [mataKuliahList, setMataKuliahList] = useState<MataKuliah[]>(initialMataKuliah);
-  const [cplList] = useState<CPL[]>(dummyCPL);
-  const [bkList] = useState<BahanKajian[]>(dummyBahanKajian);
-  const [dosenList] = useState<Dosen[]>(dummyDosen);
+  const { bkList, loading: bkLoading } = useBahanKajian();
+  const { cplList, loading: cplLoading } = useCpl();
+  const { dosenList, loading: dosenLoading } = useDosen();
+  const {
+    mataKuliahList,
+    loading: mkLoading,
+    createMataKuliah,
+    updateMataKuliah,
+    deleteMataKuliah,
+  } = useMataKuliah({ bahanKajianList: bkList, cplList });
   const [searchTerm, setSearchTerm] = useState("");
   const [filterSemester, setFilterSemester] = useState<string>("all");
   const [filterSifat, setFilterSifat] = useState<string>("all");
@@ -207,16 +90,7 @@ export default function MataKuliahPage() {
   const [activeTab, setActiveTab] = useState<"list" | "matrix">("list");
   
   // Matrix CPL-MK mappings
-  const [matrixMappings, setMatrixMappings] = useState<Record<string, string[]>>(() => {
-    // Initialize from existing MK data
-    const mappings: Record<string, string[]> = {};
-    cplList.forEach(cpl => {
-      mappings[cpl.id_cpl] = initialMataKuliah
-        .filter(mk => mk.cpl_list?.some(c => c.id_cpl === cpl.id_cpl))
-        .map(mk => mk.kode_mk);
-    });
-    return mappings;
-  });
+  const [matrixMappings, setMatrixMappings] = useState<Record<string, string[]>>({});
 
   // Form state
   const [formData, setFormData] = useState({
@@ -252,50 +126,47 @@ export default function MataKuliahPage() {
   };
 
   // Handle form submit
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const selectedBK = bkList.find((bk) => bk.id_bahan_kajian === formData.bahan_kajian_id);
     const selectedCPLs = cplList.filter((cpl) => formData.cpl_ids.includes(cpl.id_cpl));
 
-    if (editingMK) {
-      setMataKuliahList((prev) =>
-        prev.map((mk) =>
-          mk.kode_mk === editingMK.kode_mk
-            ? {
-                ...mk,
-                nama_mk: formData.nama_mk,
-                sks: formData.sks,
-                semester: formData.semester,
-                sifat: formData.sifat,
-                deskripsi: formData.deskripsi,
-                bahan_kajian: selectedBK,
-                cpl_list: selectedCPLs,
-              }
-            : mk
-        )
+    if (editingMK?.id_mk) {
+      await updateMataKuliah(
+        editingMK.id_mk,
+        {
+          kode_mk: formData.kode_mk,
+          nama_mk: formData.nama_mk,
+          sks: formData.sks,
+          semester: formData.semester,
+          sifat: formData.sifat,
+          deskripsi: formData.deskripsi,
+          id_kurikulum: "1",
+          id_bahan_kajian: formData.bahan_kajian_id || undefined,
+        },
+        { bahan_kajian: selectedBK, cpl_list: selectedCPLs }
       );
     } else {
-      const newMK: MataKuliah = {
-        kode_mk: formData.kode_mk,
-        nama_mk: formData.nama_mk,
-        sks: formData.sks,
-        semester: formData.semester,
-        sifat: formData.sifat,
-        deskripsi: formData.deskripsi,
-        id_kurikulum: "1",
-        bahan_kajian: selectedBK,
-        cpl_list: selectedCPLs,
-      };
-      setMataKuliahList((prev) => [...prev, newMK]);
+      await createMataKuliah(
+        {
+          kode_mk: formData.kode_mk,
+          nama_mk: formData.nama_mk,
+          sks: formData.sks,
+          semester: formData.semester,
+          sifat: formData.sifat,
+          deskripsi: formData.deskripsi,
+          id_kurikulum: "1",
+          id_bahan_kajian: formData.bahan_kajian_id || undefined,
+        },
+        { bahan_kajian: selectedBK, cpl_list: selectedCPLs }
+      );
     }
     handleCloseDialog();
   };
 
   // Handle delete
-  const handleDelete = () => {
-    if (deletingMK) {
-      setMataKuliahList((prev) =>
-        prev.filter((mk) => mk.kode_mk !== deletingMK.kode_mk)
-      );
+  const handleDelete = async () => {
+    if (deletingMK?.id_mk) {
+      await deleteMataKuliah(deletingMK.id_mk);
       setIsDeleteDialogOpen(false);
       setDeletingMK(null);
     }
@@ -312,7 +183,7 @@ export default function MataKuliahPage() {
         semester: mk.semester,
         sifat: mk.sifat,
         deskripsi: mk.deskripsi || "",
-        bahan_kajian_id: mk.bahan_kajian?.id_bahan_kajian || "",
+        bahan_kajian_id: mk.id_bahan_kajian || mk.bahan_kajian?.id_bahan_kajian || "",
         cpl_ids: mk.cpl_list?.map((cpl) => cpl.id_cpl) || [],
       });
     } else {
@@ -410,6 +281,17 @@ export default function MataKuliahPage() {
       closePenugasanDialog();
     }
   };
+
+  if (mkLoading || bkLoading || cplLoading || dosenLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <Icons.Loader className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

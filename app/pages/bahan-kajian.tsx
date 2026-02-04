@@ -31,30 +31,9 @@ import {
 } from "~/components/ui";
 import type { BahanKajian, AspekKUL, CPL } from "~/types";
 import { ASPEK_KUL_OPTIONS } from "~/lib/constants";
+import { useBahanKajian } from "~/hooks/useBahanKajian";
+import { useCpl } from "~/hooks/useCpl";
 
-// Dummy CPL data
-const dummyCPL: CPL[] = [
-  { id_cpl: "1", kode_cpl: "S1", aspek: "S", deskripsi_cpl: "Bertakwa kepada Tuhan YME", id_kurikulum: "1" },
-  { id_cpl: "2", kode_cpl: "S2", aspek: "S", deskripsi_cpl: "Menjunjung tinggi nilai kemanusiaan", id_kurikulum: "1" },
-  { id_cpl: "3", kode_cpl: "P1", aspek: "P", deskripsi_cpl: "Menguasai konsep teoretis bidang TI", id_kurikulum: "1" },
-  { id_cpl: "4", kode_cpl: "P2", aspek: "P", deskripsi_cpl: "Menguasai prinsip rekayasa perangkat lunak", id_kurikulum: "1" },
-  { id_cpl: "5", kode_cpl: "KU1", aspek: "KU", deskripsi_cpl: "Mampu menerapkan pemikiran logis dan kritis", id_kurikulum: "1" },
-  { id_cpl: "6", kode_cpl: "KU2", aspek: "KU", deskripsi_cpl: "Mampu menunjukkan kinerja mandiri", id_kurikulum: "1" },
-  { id_cpl: "7", kode_cpl: "KK1", aspek: "KK", deskripsi_cpl: "Mampu merancang sistem informasi", id_kurikulum: "1" },
-  { id_cpl: "8", kode_cpl: "KK2", aspek: "KK", deskripsi_cpl: "Mampu mengembangkan aplikasi web dan mobile", id_kurikulum: "1" },
-];
-
-// Dummy Bahan Kajian data
-const initialBahanKajian: BahanKajian[] = [
-  { id_bahan_kajian: "1", kode_bk: "BK-01", nama_bahan_kajian: "Algoritma dan Pemrograman", aspek: "P", ranah_keilmuan: "Ilmu Komputer Dasar", id_kurikulum: "1" },
-  { id_bahan_kajian: "2", kode_bk: "BK-02", nama_bahan_kajian: "Struktur Data", aspek: "P", ranah_keilmuan: "Ilmu Komputer Dasar", id_kurikulum: "1" },
-  { id_bahan_kajian: "3", kode_bk: "BK-03", nama_bahan_kajian: "Basis Data", aspek: "KK", ranah_keilmuan: "Sistem Informasi", id_kurikulum: "1" },
-  { id_bahan_kajian: "4", kode_bk: "BK-04", nama_bahan_kajian: "Jaringan Komputer", aspek: "KK", ranah_keilmuan: "Infrastruktur TI", id_kurikulum: "1" },
-  { id_bahan_kajian: "5", kode_bk: "BK-05", nama_bahan_kajian: "Rekayasa Perangkat Lunak", aspek: "KK", ranah_keilmuan: "Pengembangan Perangkat Lunak", id_kurikulum: "1" },
-  { id_bahan_kajian: "6", kode_bk: "BK-06", nama_bahan_kajian: "Pengembangan Web", aspek: "KK", ranah_keilmuan: "Pengembangan Aplikasi", id_kurikulum: "1" },
-  { id_bahan_kajian: "7", kode_bk: "BK-07", nama_bahan_kajian: "Etika Profesi TI", aspek: "S", ranah_keilmuan: "Etika dan Profesionalisme", id_kurikulum: "1" },
-  { id_bahan_kajian: "8", kode_bk: "BK-08", nama_bahan_kajian: "Manajemen Proyek TI", aspek: "KU", ranah_keilmuan: "Manajemen", id_kurikulum: "1" },
-];
 
 // Aspek Badge Component
 function AspekBadge({ aspek }: { aspek: AspekKUL }) {
@@ -80,8 +59,14 @@ function AspekBadge({ aspek }: { aspek: AspekKUL }) {
 }
 
 export default function BahanKajianPage() {
-  const [bkList, setBkList] = useState<BahanKajian[]>(initialBahanKajian);
-  const [cplList] = useState<CPL[]>(dummyCPL);
+  const {
+    bkList,
+    loading,
+    createBahanKajian,
+    updateBahanKajian,
+    deleteBahanKajian,
+  } = useBahanKajian();
+  const { cplList } = useCpl();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterAspek, setFilterAspek] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -93,16 +78,7 @@ export default function BahanKajianPage() {
   const [activeTab, setActiveTab] = useState<"list" | "matrix">("list");
   
   // Matrix CPL-BK mappings (CPL -> BK[])
-  const [matrixMappings, setMatrixMappings] = useState<Record<string, string[]>>({
-    "1": ["7"],           // S1 -> BK-07
-    "2": ["7"],           // S2 -> BK-07
-    "3": ["1", "2"],      // P1 -> BK-01, BK-02
-    "4": ["5"],           // P2 -> BK-05
-    "5": ["1", "8"],      // KU1 -> BK-01, BK-08
-    "6": ["8"],           // KU2 -> BK-08
-    "7": ["3", "5", "6"], // KK1 -> BK-03, BK-05, BK-06
-    "8": ["6"],           // KK2 -> BK-06
-  });
+  const [matrixMappings, setMatrixMappings] = useState<Record<string, string[]>>({});
 
   // Form state
   const [formData, setFormData] = useState({
@@ -130,30 +106,30 @@ export default function BahanKajianPage() {
   }));
 
   // Handle form submit
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (editingBK) {
-      setBkList((prev) =>
-        prev.map((bk) =>
-          bk.id_bahan_kajian === editingBK.id_bahan_kajian
-            ? { ...bk, ...formData }
-            : bk
-        )
-      );
+      await updateBahanKajian(editingBK.id_bahan_kajian, {
+        kode_bk: formData.kode_bk,
+        nama_bahan_kajian: formData.nama_bahan_kajian,
+        aspek: formData.aspek,
+        ranah_keilmuan: formData.ranah_keilmuan,
+      });
     } else {
-      const newBK: BahanKajian = {
-        id_bahan_kajian: Date.now().toString(),
-        ...formData,
+      await createBahanKajian({
+        kode_bk: formData.kode_bk,
+        nama_bahan_kajian: formData.nama_bahan_kajian,
+        aspek: formData.aspek,
+        ranah_keilmuan: formData.ranah_keilmuan,
         id_kurikulum: "1",
-      };
-      setBkList((prev) => [...prev, newBK]);
+      });
     }
     handleCloseDialog();
   };
 
   // Handle delete
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deletingBK) {
-      setBkList((prev) => prev.filter((bk) => bk.id_bahan_kajian !== deletingBK.id_bahan_kajian));
+      await deleteBahanKajian(deletingBK.id_bahan_kajian);
       setIsDeleteDialogOpen(false);
       setDeletingBK(null);
     }
@@ -217,6 +193,17 @@ export default function BahanKajianPage() {
   const countBKMappings = (bkId: string) => {
     return Object.values(matrixMappings).filter((bks) => bks.includes(bkId)).length;
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <Icons.Loader className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

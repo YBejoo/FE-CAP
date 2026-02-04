@@ -5,6 +5,7 @@
 **Project:** SI-CAP (Sistem Informasi Capaian Pembelajaran)  
 **Purpose:** Backend API untuk manajemen RPS, CPMK, dan CPL berbasis OBE (Outcome-Based Education)  
 **Tech Stack:** Bun + Hono + Drizzle ORM + Cloudflare Workers + D1 Database
+**Status:** ✅ Production Ready (All Newman Tests Passing)
 
 ---
 
@@ -25,9 +26,91 @@
 - **Cloudflare D1** - SQLite-compatible serverless database
 - Migrations: Drizzle Kit
 
+### Testing & Automation
+- **Newman** - CLI tool for running Postman collections
+- **Newman HTML Reporter** - Generate test reports
+- **Postman Collection** - Complete API test suite (50+ endpoints)
+
+### Testing & Automation
+- **Newman** - CLI tool for running Postman collections
+- **Newman HTML Reporter** - Generate test reports
+- **Postman Collection** - Complete API test suite (50+ endpoints)
+
 ### Deployment
 - **Cloudflare Workers** - Edge computing platform
 - **Wrangler** - Cloudflare CLI tool
+
+---
+
+## 🧪 Testing & Quality Assurance
+
+### Automated Testing with Newman
+
+The project includes comprehensive automated testing using Newman CLI:
+
+```bash
+# Run all tests
+npm run test:api
+
+# Run tests with detailed output
+npm run test:api:verbose
+
+# Run tests and stop on first failure
+npm run test:api:bail
+
+# Generate HTML test report
+npm run test:api:report
+```
+
+### Test Coverage
+
+**Postman Collection:** `postman/SI-CAP-API.postman_collection.json`
+- ✅ **50+ API Endpoints** tested
+- ✅ **Authentication** (Login, Register, Refresh Token)
+- ✅ **CRUD Operations** for all entities
+- ✅ **Matrix Operations** (CPL-PL, CPL-BK, CPL-MK)
+- ✅ **Workflow Operations** (RPS Submit/Validate/Reject)
+- ✅ **Business Logic** validation
+- ✅ **Error Handling** verification
+
+### Test Scripts Features
+
+Each endpoint includes:
+- **Pre-request Scripts**: Generate unique test data, create dependencies
+- **Test Assertions**: Status codes, response structure, data validation
+- **Auto-save IDs**: Collection variables for chaining requests
+- **Error Recovery**: Handle dependency creation failures
+
+### Package.json Test Scripts
+
+```json
+{
+  "scripts": {
+    "test:api": "newman run postman/SI-CAP-API.postman_collection.json --environment postman/SI-CAP-API.postman_environment.json",
+    "test:api:bail": "newman run postman/SI-CAP-API.postman_collection.json --environment postman/SI-CAP-API.postman_environment.json --bail",
+    "test:api:verbose": "newman run postman/SI-CAP-API.postman_collection.json --environment postman/SI-CAP-API.postman_environment.json --verbose",
+    "test:api:report": "newman run postman/SI-CAP-API.postman_collection.json --environment postman/SI-CAP-API.postman_environment.json --reporters html --reporter-html-export reports/test-report.html"
+  }
+}
+```
+
+### CI/CD Integration
+
+For continuous integration:
+
+```yaml
+# .github/workflows/test-api.yml
+name: API Tests
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: oven-sh/setup-bun@v1
+      - run: bun install
+      - run: bun run test:api:bail
+```
 
 ---
 
@@ -1048,13 +1131,12 @@ wrangler tail
 - **KK** = Keterampilan Khusus
 
 ### Business Rules
-1. **Kurikulum** - Bisa lebih dari 1 kurikulum aktif per prodi (multiple active)
+1. **Kurikulum** - Hanya 1 kurikulum aktif per prodi
 2. **MK → BK** - 1 MK memiliki 1 Bahan Kajian
 3. **MK → CPL** - 1 MK memiliki minimal 2 CPL
 4. **RPS** - Harus divalidasi Kaprodi sebelum Terbit
 5. **CPMK** - Total bobot harus 100%
 6. **Penugasan Dosen** - 1 MK bisa memiliki multiple dosen, 1 koordinator
-7. **KKM** - Kriteria Ketuntasan Minimal yang dapat diatur oleh Kaprodi (default: 70)
 
 ### Frontend Integration
 - Base URL: `https://si-cap-api.workers.dev` (production)
@@ -1071,132 +1153,794 @@ wrangler tail
 
 ---
 
-## 📈 Dashboard Analytics API Endpoints (NEW)
+## 🎯 Frontend Integration Guide
 
-### KKM Settings
+> **Catatan Integrasi:** Disarankan menggunakan **Axios** sebagai HTTP client agar pengelolaan base URL, interceptor token, dan error handling lebih konsisten.
+
+### Authentication Flow
+
 ```typescript
-// GET /api/settings/kkm - Get current KKM value
-// PUT /api/settings/kkm - Update KKM value (Kaprodi only)
+// 1. Login
+const login = async (email: string, password: string) => {
+  const response = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  });
+  
+  const data = await response.json();
+  if (data.success) {
+    localStorage.setItem('token', data.data.token);
+    localStorage.setItem('refreshToken', data.data.refreshToken);
+    // Redirect to dashboard
+  }
+};
+
+// 2. Use token in requests
+const headers = {
+  'Authorization': `Bearer ${localStorage.getItem('token')}`,
+  'Content-Type': 'application/json'
+};
+
+// 3. Handle token refresh
+const refreshToken = async () => {
+  const response = await fetch('/api/auth/refresh', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ 
+      refreshToken: localStorage.getItem('refreshToken') 
+    })
+  });
+  
+  if (response.ok) {
+    const data = await response.json();
+    localStorage.setItem('token', data.data.token);
+  } else {
+    // Redirect to login
+    localStorage.clear();
+    window.location.href = '/login';
+  }
+};
+```
+
+### Data Fetching Patterns
+
+```typescript
+// Generic API call with error handling
+const apiCall = async (endpoint: string, options: RequestInit = {}) => {
+  const baseURL = import.meta.env.PROD 
+    ? 'https://si-cap-api.workers.dev' 
+    : 'http://localhost:8787';
+    
+  const url = `${baseURL}${endpoint}`;
+  const token = localStorage.getItem('token');
+  
+  const defaultOptions: RequestInit = {
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` }),
+      ...options.headers
+    }
+  };
+  
+  try {
+    const response = await fetch(url, { ...defaultOptions, ...options });
+    const data = await response.json();
+    
+    if (response.status === 401) {
+      // Try refresh token
+      await refreshToken();
+      // Retry request
+      return apiCall(endpoint, options);
+    }
+    
+    if (!data.success) {
+      throw new Error(data.error || 'API Error');
+    }
+    
+    return data.data;
+  } catch (error) {
+    console.error('API Error:', error);
+    throw error;
+  }
+};
+
+// Usage examples
+const kurikulumList = await apiCall('/api/kurikulum');
+const mataKuliah = await apiCall('/api/mata-kuliah', { 
+  method: 'POST', 
+  body: JSON.stringify(mkData) 
+});
+```
+
+### State Management Integration
+
+```typescript
+// React Query / SWR pattern
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+
+const useKurikulum = () => {
+  return useQuery({
+    queryKey: ['kurikulum'],
+    queryFn: () => apiCall('/api/kurikulum')
+  });
+};
+
+const useCreateMataKuliah = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (data) => apiCall('/api/mata-kuliah', { 
+      method: 'POST', 
+      body: JSON.stringify(data) 
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mata-kuliah'] });
+    }
+  });
+};
+```
+
+### Form Validation & Error Handling
+
+```typescript
+// Zod schema matching backend validators
+import { z } from 'zod';
+
+const mataKuliahSchema = z.object({
+  kode_mk: z.string().min(1, 'Kode MK wajib diisi'),
+  nama_mk: z.string().min(1, 'Nama MK wajib diisi'),
+  sks: z.number().int().min(1).max(6),
+  semester: z.number().int().min(1).max(8),
+  sifat: z.enum(['Wajib', 'Pilihan']),
+  deskripsi: z.string().optional(),
+  id_kurikulum: z.string().min(1, 'Kurikulum wajib dipilih'),
+  id_bahan_kajian: z.string().optional()
+});
+
+// Form submission with validation
+const handleSubmit = async (formData) => {
+  try {
+    const validatedData = mataKuliahSchema.parse(formData);
+    await createMataKuliah.mutateAsync(validatedData);
+    // Success handling
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      // Handle validation errors
+      setErrors(error.errors);
+    } else {
+      // Handle API errors
+      setError(error.message);
+    }
+  }
+};
+```
+
+### Matrix Operations
+
+```typescript
+// Fetch matrix data
+const fetchMatrix = async (type: 'cpl-pl' | 'cpl-bk' | 'cpl-mk') => {
+  const endpoints = {
+    'cpl-pl': '/api/cpl/matrix/pl',
+    'cpl-bk': '/api/bahan-kajian/matrix/cpl',
+    'cpl-mk': '/api/mata-kuliah/matrix/cpl'
+  };
+  
+  return await apiCall(endpoints[type]);
+};
+
+// Save matrix mappings
+const saveMatrix = async (type: string, mappings: any[]) => {
+  const endpoints = {
+    'cpl-pl': '/api/cpl/matrix/pl',
+    'cpl-bk': '/api/bahan-kajian/matrix/cpl',
+    'cpl-mk': '/api/mata-kuliah/matrix/cpl'
+  };
+  
+  return await apiCall(endpoints[type], {
+    method: 'POST',
+    body: JSON.stringify({ mappings })
+  });
+};
+```
+
+### RPS Workflow
+
+```typescript
+// Submit RPS for validation
+const submitRPS = async (rpsId: string, kaprodiId: string) => {
+  return await apiCall(`/api/rps/${rpsId}/submit`, {
+    method: 'PATCH',
+    body: JSON.stringify({ id_kaprodi: kaprodiId })
+  });
+};
+
+// Validate RPS (Kaprodi only)
+const validateRPS = async (rpsId: string) => {
+  return await apiCall(`/api/rps/${rpsId}/validate`, {
+    method: 'PATCH'
+  });
+};
+
+// Reject RPS (Kaprodi only)
+const rejectRPS = async (rpsId: string) => {
+  return await apiCall(`/api/rps/${rpsId}/reject`, {
+    method: 'PATCH'
+  });
+};
+```
+
+### File Upload Handling
+
+```typescript
+// For future file upload features (RPS attachments, etc.)
+const uploadFile = async (file: File, type: string) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('type', type);
+  
+  return await apiCall('/api/upload', {
+    method: 'POST',
+    headers: {
+      // Don't set Content-Type, let browser set it with boundary
+      'Authorization': `Bearer ${localStorage.getItem('token')}`
+    },
+    body: formData
+  });
+};
+```
+
+### Real-time Updates (Future Enhancement)
+
+```typescript
+// WebSocket connection for real-time updates
+const connectWebSocket = () => {
+  const ws = new WebSocket('wss://si-cap-api.workers.dev/ws');
+  
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    // Handle real-time updates (RPS status changes, etc.)
+  };
+  
+  return ws;
+};
+```
+
+---
+
+## � Quick Start for Frontend Developers
+
+### 1. Environment Setup
+
+```bash
+# Clone frontend project
+git clone <your-frontend-repo>
+cd your-frontend-project
+
+# Install dependencies
+npm install
+
+# Copy environment file
+cp .env.example .env.local
+```
+
+```env
+# .env.local
+VITE_API_BASE_URL=http://localhost:8787
+VITE_API_PROD_URL=https://si-cap-api.workers.dev
+```
+
+### 2. API Client Setup
+
+Create a simple API client:
+
+```typescript
+// src/lib/api.ts
+const API_BASE = import.meta.env.VITE_API_BASE_URL;
+
+class ApiClient {
+  private token: string | null = null;
+  
+  setToken(token: string) {
+    this.token = token;
+  }
+  
+  private async request(endpoint: string, options: RequestInit = {}) {
+    const url = `${API_BASE}${endpoint}`;
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(this.token && { 'Authorization': `Bearer ${this.token}` }),
+      ...options.headers
+    };
+    
+    const response = await fetch(url, { ...options, headers });
+    const data = await response.json();
+    
+    if (!data.success) {
+      throw new Error(data.error || 'API Error');
+    }
+    
+    return data.data;
+  }
+  
+  // Auth methods
+  async login(credentials: { email: string; password: string }) {
+    const data = await this.request('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(credentials)
+    });
+    this.setToken(data.token);
+    return data;
+  }
+  
+  // CRUD methods
+  async getKurikulum() {
+    return this.request('/api/kurikulum');
+  }
+  
+  async createMataKuliah(data: any) {
+    return this.request('/api/mata-kuliah', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+  
+  // Add more methods as needed...
+}
+
+export const api = new ApiClient();
+```
+
+### 3. Component Example
+
+```tsx
+// src/components/MataKuliahForm.tsx
+import { useState } from 'react';
+import { api } from '../lib/api';
+
+export function MataKuliahForm() {
+  const [formData, setFormData] = useState({
+    kode_mk: '',
+    nama_mk: '',
+    sks: 3,
+    semester: 1,
+    sifat: 'Wajib',
+    id_kurikulum: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    
+    try {
+      await api.createMataKuliah(formData);
+      // Success: redirect or show success message
+      alert('Mata Kuliah berhasil dibuat!');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  return (
+    <form onSubmit={handleSubmit}>
+      <div>
+        <label>Kode MK:</label>
+        <input
+          type="text"
+          value={formData.kode_mk}
+          onChange={(e) => setFormData({...formData, kode_mk: e.target.value})}
+          required
+        />
+      </div>
+      
+      <div>
+        <label>Nama MK:</label>
+        <input
+          type="text"
+          value={formData.nama_mk}
+          onChange={(e) => setFormData({...formData, nama_mk: e.target.value})}
+          required
+        />
+      </div>
+      
+      <div>
+        <label>SKS:</label>
+        <input
+          type="number"
+          min="1"
+          max="6"
+          value={formData.sks}
+          onChange={(e) => setFormData({...formData, sks: parseInt(e.target.value)})}
+          required
+        />
+      </div>
+      
+      <div>
+        <label>Semester:</label>
+        <input
+          type="number"
+          min="1"
+          max="8"
+          value={formData.semester}
+          onChange={(e) => setFormData({...formData, semester: parseInt(e.target.value)})}
+          required
+        />
+      </div>
+      
+      <div>
+        <label>Sifat:</label>
+        <select
+          value={formData.sifat}
+          onChange={(e) => setFormData({...formData, sifat: e.target.value as 'Wajib' | 'Pilihan'})}
+        >
+          <option value="Wajib">Wajib</option>
+          <option value="Pilihan">Pilihan</option>
+        </select>
+      </div>
+      
+      {error && <div style={{color: 'red'}}>{error}</div>}
+      
+      <button type="submit" disabled={loading}>
+        {loading ? 'Menyimpan...' : 'Simpan'}
+      </button>
+    </form>
+  );
+}
+```
+
+### 4. Testing Integration
+
+```bash
+# Start backend locally
+cd path/to/backend
+bun run dev
+
+# Start frontend
+cd path/to/frontend
+npm run dev
+
+# Test API integration
+# Use browser dev tools to check network requests
+# Verify authentication flow
+# Test CRUD operations
+```
+
+### 5. Production Deployment
+
+```typescript
+// Update API client for production
+const API_BASE = import.meta.env.PROD 
+  ? import.meta.env.VITE_API_PROD_URL 
+  : import.meta.env.VITE_API_BASE_URL;
+```
+
+---
+
+## 📊 API Response Examples
+
+### Success Response
+```json
 {
-  "kkm": 70 // 0-100
+  "success": true,
+  "data": {
+    "id": "abc123",
+    "kode_mk": "TI101",
+    "nama_mk": "Algoritma dan Pemrograman",
+    "sks": 3,
+    "semester": 1,
+    "sifat": "Wajib",
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:00Z"
+  },
+  "message": "Mata kuliah created"
 }
 ```
 
-### Profil Lulusan Chart Data
-```typescript
-// GET /api/dashboard/profil-lulusan
-// Response: Array of Profil Lulusan with achievement percentage
-interface ProfilLulusanChartData {
-  kode: string;           // PL1, PL2, PL3
-  nama: string;           // Software Engineer, etc
-  jumlah_cpl: number;     // Related CPL count
-  persentase: number;     // Achievement percentage (0-100)
+### Error Response
+```json
+{
+  "success": false,
+  "error": "Validation failed",
+  "details": [
+    {
+      "code": "invalid_type",
+      "expected": "string",
+      "received": "undefined",
+      "path": ["nama_mk"],
+      "message": "Required"
+    }
+  ]
 }
 ```
 
-### CPL/Bahan Kajian Chart Data
-```typescript
-// GET /api/dashboard/cpl
-// Response: Array of CPL (Bahan Kajian) with average scores
-interface CPLChartData {
-  kode: string;           // BK1, BK2, BK3
-  nama: string;           // Pemrograman Dasar, etc
-  rata_rata: number;      // Average score (0-100)
-  jumlah_mk: number;      // Related MK count
-}
-```
-
-### Bahan Kajian/Mata Kuliah Chart Data
-```typescript
-// GET /api/dashboard/mata-kuliah
-// Response: Array of MK with average scores
-interface BahanKajianChartData {
-  kode: string;           // MK1, MK2, MK3
-  nama: string;           // Algoritma & Pemrograman, etc
-  rata_rata: number;      // Average score (0-100)
-  jumlah_mahasiswa: number;
-}
-```
-
-### Mahasiswa di Bawah KKM per MK
-```typescript
-// GET /api/dashboard/mahasiswa-bawah-kkm/:kode_mk
-// Response: Trend data per semester
-interface MahasiswaBawahKKMData {
-  kode_mk: string;            // Semester identifier
-  nama_mk: string;            // Semester name (2023/2024 Ganjil)
-  jumlah_dibawah_kkm: number; // Count below KKM
-  total_mahasiswa: number;    // Total students
-  persentase: number;         // Percentage below KKM
-}
-```
-
-### CPMK Average per MK
-```typescript
-// GET /api/dashboard/cpmk/:kode_mk
-// Response: Array of CPMK average scores
-interface CPMKRataRataData {
-  kode_cpmk: string;      // CPMK1, CPMK2, CPMK3
-  rata_rata: number;      // Average score (0-100)
-  jumlah_mahasiswa: number;
-}
-```
-
-### Mahasiswa Grade Data
-```typescript
-// GET /api/dashboard/mahasiswa/:nim
-// Response: Student's grades per MK
-interface NilaiMahasiswaPerMK {
-  nim: string;
-  nama_mahasiswa: string;
-  angkatan: number;
-  nilai_per_cpmk: { kode_cpmk: string; nilai: number }[];
-  nilai_akhir: number;
-  status: 'Lulus' | 'Tidak Lulus';
+### Paginated Response
+```json
+{
+  "success": true,
+  "data": [
+    { "id": "abc123", "nama_mk": "Algoritma" },
+    { "id": "def456", "nama_mk": "Struktur Data" }
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total": 25,
+    "totalPages": 3
+  }
 }
 ```
 
 ---
 
-## 🎓 Mahasiswa Schema (NEW)
+## 🔧 Troubleshooting
 
-```typescript
-// ==================== MAHASISWA ====================
-export const mahasiswa = sqliteTable('mahasiswa', {
-  nim: text('nim').primaryKey(),
-  nama_mahasiswa: text('nama_mahasiswa').notNull(),
-  angkatan: integer('angkatan').notNull(),
-  id_prodi: text('id_prodi').notNull().references(() => prodi.id),
-  email: text('email'),
-  foto_url: text('foto_url'),
-  created_at: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
-  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+### Common Frontend Integration Issues
+
+#### 1. CORS Errors
+```javascript
+// Error: Access to XMLHttpRequest at 'https://api.example.com/auth/login' 
+// from origin 'http://localhost:3000' has been blocked by CORS policy
+
+// Solution: Configure CORS in your API client
+const apiClient = axios.create({
+  baseURL: 'https://api.example.com',
+  withCredentials: true, // Important for cookies/auth
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
-// ==================== NILAI MAHASISWA ====================
-export const nilaiMahasiswa = sqliteTable('nilai_mahasiswa', {
-  id: text('id').primaryKey(),
-  nim: text('nim').notNull().references(() => mahasiswa.nim, { onDelete: 'cascade' }),
-  kode_mk: text('kode_mk').notNull().references(() => mataKuliah.kode_mk, { onDelete: 'cascade' }),
-  id_cpmk: text('id_cpmk').notNull().references(() => cpmk.id, { onDelete: 'cascade' }),
-  nilai: real('nilai').notNull(), // 0-100
-  semester: text('semester').notNull(), // "2024/2025 Ganjil"
-  created_at: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
-  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+// For development, ensure your dev server proxies API calls
+// vite.config.js
+export default defineConfig({
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://api.example.com',
+        changeOrigin: true,
+        secure: true,
+      }
+    }
+  }
+});
+```
+
+#### 2. Token Expiration Handling
+```javascript
+// Automatic token refresh with axios interceptors
+import axios from 'axios';
+
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then(token => {
+          originalRequest.headers['Authorization'] = 'Bearer ' + token;
+          return apiClient(originalRequest);
+        }).catch(err => Promise.reject(err));
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        const { data } = await apiClient.post('/auth/refresh');
+        const { access_token } = data.data;
+        
+        localStorage.setItem('access_token', access_token);
+        apiClient.defaults.headers.common['Authorization'] = 'Bearer ' + access_token;
+        
+        processQueue(null, access_token);
+        return apiClient(originalRequest);
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        // Redirect to login
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+```
+
+#### 3. Validation Error Handling
+```javascript
+// Handle Zod validation errors from API
+const handleApiError = (error) => {
+  if (error.response?.data?.success === false) {
+    const { error: errorMessage, details } = error.response.data;
+    
+    if (details && Array.isArray(details)) {
+      // Zod validation errors
+      const fieldErrors = {};
+      details.forEach(detail => {
+        const field = detail.path?.[0];
+        if (field) {
+          fieldErrors[field] = detail.message;
+        }
+      });
+      setErrors(fieldErrors);
+    } else {
+      // General error
+      setError(errorMessage || 'An error occurred');
+    }
+  }
+};
+
+// Usage in form submission
+const onSubmit = async (data) => {
+  try {
+    await apiClient.post('/mata-kuliah', data);
+    // Success handling
+  } catch (error) {
+    handleApiError(error);
+  }
+};
+```
+
+#### 4. Network Error Handling
+```javascript
+// Robust error handling with retry logic
+const apiCallWithRetry = async (apiCall, maxRetries = 3) => {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await apiCall();
+    } catch (error) {
+      if (i === maxRetries - 1) throw error;
+      
+      // Only retry on network errors, not 4xx/5xx
+      if (!error.response) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+        continue;
+      }
+      
+      throw error;
+    }
+  }
+};
+
+// Usage
+const fetchData = () => apiCallWithRetry(() => apiClient.get('/data'));
+```
+
+#### 5. Development Tips
+
+**Environment Variables:**
+```javascript
+// .env.local
+VITE_API_BASE_URL=http://localhost:8787
+VITE_API_PROD_URL=https://api.yourdomain.com
+
+// Use in code
+const API_BASE = import.meta.env.PROD 
+  ? import.meta.env.VITE_API_PROD_URL 
+  : import.meta.env.VITE_API_BASE_URL;
+```
+
+**API Client Setup:**
+```javascript
+// src/lib/api.ts
+import axios from 'axios';
+
+const apiClient = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL,
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
-// ==================== SETTINGS (KKM) ====================
-export const settings = sqliteTable('settings', {
-  key: text('key').primaryKey(),
-  value: text('value').notNull(),
-  updated_at: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+// Request interceptor for auth
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('access_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
-// Default: { key: 'kkm', value: '70' }
+
+export default apiClient;
+```
+
+**Form Validation with React Hook Form + Zod:**
+```javascript
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
+const mataKuliahSchema = z.object({
+  kode_mk: z.string().min(1, 'Kode mata kuliah wajib diisi'),
+  nama_mk: z.string().min(1, 'Nama mata kuliah wajib diisi'),
+  sks: z.number().min(1).max(6),
+  semester: z.number().min(1).max(8),
+  sifat: z.enum(['Wajib', 'Pilihan']),
+});
+
+const { register, handleSubmit, formState: { errors } } = useForm({
+  resolver: zodResolver(mataKuliahSchema),
+});
+```
+
+#### 6. Performance Optimization
+
+**Debounced Search:**
+```javascript
+import { useState, useEffect, useCallback } from 'react';
+
+const useDebounce = (value, delay) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+
+  return debouncedValue;
+};
+
+// Usage in search component
+const SearchComponent = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
+  useEffect(() => {
+    if (debouncedSearchTerm) {
+      apiClient.get(`/mata-kuliah/search?q=${debouncedSearchTerm}`);
+    }
+  }, [debouncedSearchTerm]);
+};
+```
+
+**Infinite Scroll for Large Lists:**
+```javascript
+import { useInfiniteQuery } from '@tanstack/react-query';
+
+const useInfiniteMataKuliah = () => {
+  return useInfiniteQuery({
+    queryKey: ['mata-kuliah'],
+    queryFn: ({ pageParam = 1 }) => 
+      apiClient.get(`/mata-kuliah?page=${pageParam}&limit=20`),
+    getNextPageParam: (lastPage) => {
+      const { meta } = lastPage.data;
+      return meta.page < meta.totalPages ? meta.page + 1 : undefined;
+    },
+  });
+};
 ```
 
 ---
-
-## 📚 References
 
 - [Hono Documentation](https://hono.dev)
 - [Drizzle ORM Documentation](https://orm.drizzle.team)
