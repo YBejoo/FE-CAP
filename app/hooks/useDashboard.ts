@@ -1,142 +1,90 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import type {
-  BahanKajianChartData,
-  CPLChartData,
-  DashboardStats,
-  Mahasiswa,
-  MahasiswaBawahKKMData,
-  MataKuliah,
-  NilaiMahasiswaPerMK,
-  ProfilLulusan,
-  ProfilLulusanChartData,
-  CPMKRataRataData,
-} from "~/types";
-import { fetchMataKuliahList } from "~/services/mata-kuliah.service";
-import { fetchProfilLulusanList } from "~/services/profil-lulusan.service";
-import { fetchCplList } from "~/services/cpl.service";
-import { fetchBahanKajianList } from "~/services/bahan-kajian.service";
-import { fetchMahasiswaList } from "~/services/mahasiswa.service";
-import {
-  fetchCpmkRataRata,
-  fetchDashboardStats,
-  fetchMahasiswaBawahKKM,
-  fetchNilaiMahasiswa,
-} from "~/services/dashboard.service";
+/**
+ * Dashboard Hook
+ * Manages dashboard state and data fetching
+ */
 
-export function useDashboard() {
-  const [profilLulusan, setProfilLulusan] = useState<ProfilLulusan[]>([]);
-  const [cplList, setCplList] = useState([] as { kode_cpl: string; deskripsi_cpl: string }[]);
-  const [bahanKajianList, setBahanKajianList] = useState([] as { kode_bk: string; nama_bahan_kajian: string }[]);
-  const [mataKuliahList, setMataKuliahList] = useState<MataKuliah[]>([]);
-  const [mahasiswaList, setMahasiswaList] = useState<Mahasiswa[]>([]);
-  const [dashboardSnapshot, setDashboardSnapshot] = useState<{
-    totalMataKuliah?: number;
-    totalCPL?: number;
-    totalMahasiswa?: number;
-  } | null>(null);
-  const [nilaiMahasiswaPerMK, setNilaiMahasiswaPerMK] = useState<Record<string, Record<string, NilaiMahasiswaPerMK>>>({});
-  const [mahasiswaBawahKKMPerMK, setMahasiswaBawahKKMPerMK] = useState<Record<string, MahasiswaBawahKKMData[]>>({});
-  const [cpmkRataRataPerMK, setCpmkRataRataPerMK] = useState<Record<string, CPMKRataRataData[]>>({});
+import { useCallback, useEffect, useState } from "react";
+import { fetchDashboardStats, fetchRecentActivities, type DashboardStats, type RecentActivity } from "~/services/dashboard.service";
+
+const isDevelopment = import.meta.env.DEV;
+
+export function useDashboard(id_kurikulum?: string) {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [activities, setActivities] = useState<RecentActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  /**
+   * Fetch dashboard data from backend
+   */
+  const fetchData = useCallback(async () => {
     try {
-      const [profil, cpl, bahan, mk, mahasiswa, nilai, kkm, cpmk, dashboard] = await Promise.all([
-        fetchProfilLulusanList(),
-        fetchCplList(),
-        fetchBahanKajianList(),
-        fetchMataKuliahList(),
-        fetchMahasiswaList(),
-        fetchNilaiMahasiswa(),
-        fetchMahasiswaBawahKKM(),
-        fetchCpmkRataRata(),
-        fetchDashboardStats(),
-      ]);
+      console.log('\n🎯 [useDashboard Hook] ========== HOOK START ==========');
+      console.log('🎯 [useDashboard Hook] Kurikulum ID:', id_kurikulum || 'ALL');
+      
+      setLoading(true);
+      setError(null);
 
-      setProfilLulusan(profil);
-      setCplList(cpl.map((item) => ({ kode_cpl: item.kode_cpl, deskripsi_cpl: item.deskripsi_cpl })));
-      setBahanKajianList(bahan.map((item) => ({ kode_bk: item.kode_bk, nama_bahan_kajian: item.nama_bahan_kajian })));
-      setMataKuliahList(mk);
-      setMahasiswaList(mahasiswa);
-      setNilaiMahasiswaPerMK(nilai);
-      setMahasiswaBawahKKMPerMK(kkm);
-      setCpmkRataRataPerMK(cpmk);
-      setDashboardSnapshot(dashboard?.stats ?? null);
+      // Fetch dashboard stats
+      console.log('🎯 [useDashboard Hook] Calling fetchDashboardStats...');
+      const dashboardStats = await fetchDashboardStats(id_kurikulum);
+      
+      console.log('🎯 [useDashboard Hook] Stats received:', dashboardStats);
+      console.log('🎯 [useDashboard Hook] Setting stats to state...');
+      setStats(dashboardStats);
+      console.log('✅ [useDashboard Hook] Stats set successfully');
 
-      return dashboard;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load dashboard data");
-      return undefined;
+      // Fetch recent activities (optional, might not be implemented yet)
+      try {
+        console.log('🎯 [useDashboard Hook] Calling fetchRecentActivities...');
+        const recentActivities = await fetchRecentActivities(10);
+        console.log('🎯 [useDashboard Hook] Activities received:', recentActivities?.length || 0);
+        setActivities(recentActivities);
+      } catch (err) {
+        // Activities endpoint might not be implemented yet
+        console.warn('⚠️ [useDashboard Hook] Activities not available');
+        setActivities([]);
+      }
+
+      console.log('✅ [useDashboard Hook] ========== HOOK SUCCESS ==========\n');
+    } catch (err: any) {
+      console.log('\n❌ [useDashboard Hook] ========== HOOK ERROR ==========');
+      
+      // Don't show error if it's a 401 (auth context will handle redirect)
+      if (err?.response?.status === 401) {
+        console.log('🔐 [useDashboard Hook] 401 Unauthorized - auth will handle redirect');
+        console.log('❌ [useDashboard Hook] ========== ERROR END ==========\n');
+        return;
+      }
+
+      const errorMessage = err?.userMessage || err?.response?.data?.message || err?.message || "Gagal memuat data dashboard";
+      console.error('💥 [useDashboard Hook] Error message:', errorMessage);
+      console.error('💥 [useDashboard Hook] Full error:', err);
+      
+      setError(errorMessage);
+      console.log('❌ [useDashboard Hook] ========== ERROR END ==========\n');
     } finally {
       setLoading(false);
+      console.log('🏁 [useDashboard Hook] Loading state set to false');
     }
-  }, []);
+  }, [id_kurikulum]);
 
+  // Load data on mount and when kurikulum changes
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    console.log('🔄 [useDashboard Hook] Component mounted/updated, triggering fetch...');
+    fetchData();
+  }, [fetchData]);
 
-  const profilLulusanData: ProfilLulusanChartData[] = useMemo(
-    () =>
-      profilLulusan.map((item) => ({
-        kode: item.kode_profil,
-        nama: item.profil_lulusan,
-        jumlah_cpl: 0,
-        persentase: 0,
-      })),
-    [profilLulusan]
-  );
-
-  const cplData: CPLChartData[] = useMemo(
-    () =>
-      cplList.map((item) => ({
-        kode: item.kode_cpl,
-        nama: item.deskripsi_cpl,
-        rata_rata: 0,
-        jumlah_mk: 0,
-      })),
-    [cplList]
-  );
-
-  const bahanKajianData: BahanKajianChartData[] = useMemo(
-    () =>
-      bahanKajianList.map((item) => ({
-        kode: item.kode_bk,
-        nama: item.nama_bahan_kajian,
-        rata_rata: 0,
-        jumlah_mahasiswa: 0,
-      })),
-    [bahanKajianList]
-  );
-
-  const stats: DashboardStats = useMemo(
-    () => ({
-      totalKurikulum: 0,
-      totalProfilLulusan: profilLulusan.length,
-      totalCPL: dashboardSnapshot?.totalCPL ?? cplList.length,
-      totalMataKuliah: dashboardSnapshot?.totalMataKuliah ?? mataKuliahList.length,
-      totalCPMK: 0,
-      totalRPS: 0,
-      rpsSelesai: 0,
-      rpsDraft: 0,
-      kkm: 70,
-    }),
-    [profilLulusan.length, cplList.length, mataKuliahList.length, dashboardSnapshot]
-  );
+  /**
+   * Refresh dashboard data
+   */
+  const refresh = useCallback(() => {
+    return fetchData();
+  }, [fetchData]);
 
   return {
-    profilLulusanData,
-    cplData,
-    bahanKajianData,
-    mataKuliahList,
-    mahasiswaList,
-    nilaiMahasiswaPerMK,
-    mahasiswaBawahKKMPerMK,
-    cpmkRataRataPerMK,
     stats,
+    activities,
     loading,
     error,
     refresh,

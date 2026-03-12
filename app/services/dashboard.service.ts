@@ -1,96 +1,125 @@
-import type {
-  DashboardStats,
-  MahasiswaBawahKKMData,
-  CPMKRataRataData,
-  NilaiMahasiswaPerMK,
-} from "~/types";
-import { dummyDashboardStats, dummyCPMK, dummyNilaiMahasiswa, dummyMahasiswa } from "~/data/dummy-data";
+/**
+ * Dashboard Service
+ * Handles dashboard statistics and analytics
+ */
 
-// Using dummy data for now
-export async function fetchDashboardStats(): Promise<DashboardStats> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  return dummyDashboardStats;
-}
+import api from "~/lib/api";
+import type { ApiResponse } from "~/types";
+import { unwrapResponse } from "~/services/utils";
 
-export async function fetchNilaiMahasiswa(): Promise<Record<string, Record<string, NilaiMahasiswaPerMK>>> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  
-  // Transform dummy data to expected format
-  const result: Record<string, Record<string, NilaiMahasiswaPerMK>> = {};
-  
-  dummyNilaiMahasiswa.forEach((nilai) => {
-    if (!result[nilai.kode_mk]) {
-      result[nilai.kode_mk] = {};
-    }
+const isDevelopment = import.meta.env.DEV;
+
+/**
+ * Dashboard Statistics Response Type from Backend
+ */
+export type DashboardStats = {
+  kurikulum: {
+    total: number;
+    selected_id: string | null;
+  };
+  summary: {
+    total_profil_lulusan: number;
+    total_kompetensi_utama: number;
+    total_cpl: number;
+    total_bahan_kajian: number;
+    total_mata_kuliah: number;
+    total_dosen: number;
+    total_cpmk: number;
+    total_rps: number;
+    total_sks: number;
+  };
+  statistics: {
+    cpl_by_aspek: Record<string, number>;
+    kul_by_aspek?: Record<string, number>;
+    bk_by_aspek?: Record<string, number>;
+    mk_by_semester: Array<{ semester: number; total: number }>;
+    mk_by_sifat: Record<string, number>;
+    rps_by_status: Record<string, number>;
+    dosen_by_jabatan?: Record<string, number>;
+  };
+  matrix: {
+    total_cpl_pl: number;
+    total_cpl_bk: number;
+    total_cpl_mk: number;
+  };
+};
+
+/**
+ * Recent Activity Type
+ */
+export type RecentActivity = {
+  id: string;
+  type: string;
+  description: string;
+  user: string;
+  timestamp: string;
+};
+
+/**
+ * Fetch dashboard statistics from backend
+ * @param id_kurikulum - Optional kurikulum ID to filter stats
+ */
+export async function fetchDashboardStats(id_kurikulum?: string): Promise<DashboardStats> {
+  try {
+    console.log('🟢 [Dashboard Service] ========== FETCH START ==========');
+    console.log('📋 [Dashboard Service] Request params:', { id_kurikulum });
     
-    if (!result[nilai.kode_mk][nilai.nim]) {
-      const mhs = dummyMahasiswa.find(m => m.nim === nilai.nim);
-      const cpmkList = dummyCPMK.filter(c => c.kode_mk === nilai.kode_mk);
-      const nilaiPerCpmk = cpmkList.map(cpmk => {
-        const nilaiData = dummyNilaiMahasiswa.find(n => n.nim === nilai.nim && n.id_cpmk === cpmk.id_cpmk);
-        return {
-          kode_cpmk: cpmk.kode_cpmk,
-          nilai: nilaiData?.nilai || 0
-        };
-      });
-      
-      const nilaiAkhir = nilaiPerCpmk.reduce((sum, n) => sum + n.nilai, 0) / nilaiPerCpmk.length;
-      
-      result[nilai.kode_mk][nilai.nim] = {
-        nim: nilai.nim,
-        nama_mahasiswa: mhs?.nama_mahasiswa || "Unknown",
-        angkatan: mhs?.angkatan || 2024,
-        nilai_per_cpmk: nilaiPerCpmk,
-        nilai_akhir: Math.round(nilaiAkhir * 100) / 100,
-        status: nilaiAkhir >= 75 ? "Lulus" : "Tidak Lulus"
-      };
-    }
-  });
-  
-  return result;
-}
-
-export async function fetchMahasiswaBawahKKM(): Promise<Record<string, MahasiswaBawahKKMData[]>> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  
-  // Calculate students below KKM (75)
-  const result: Record<string, MahasiswaBawahKKMData[]> = {};
-  const kkm = 75;
-  
-  // Group by kode_mk
-  const mkMap = new Map<string, { total: number; belowKKM: number; nama: string }>();
-  
-  dummyNilaiMahasiswa.forEach((nilai) => {
-    if (!mkMap.has(nilai.kode_mk)) {
-      mkMap.set(nilai.kode_mk, { total: 0, belowKKM: 0, nama: "" });
-    }
-  });
-  
-  return {};
-}
-
-export async function fetchCpmkRataRata(): Promise<Record<string, CPMKRataRataData[]>> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  
-  const result: Record<string, CPMKRataRataData[]> = {};
-  
-  // Group by kode_mk
-  dummyCPMK.forEach((cpmk) => {
-    if (!result[cpmk.kode_mk]) {
-      result[cpmk.kode_mk] = [];
-    }
+    const params = id_kurikulum ? { id_kurikulum } : undefined;
+    console.log('🌐 [Dashboard Service] Calling API: GET /dashboard');
     
-    const nilaiCpmk = dummyNilaiMahasiswa.filter(n => n.id_cpmk === cpmk.id_cpmk);
-    const rataRata = nilaiCpmk.length > 0 
-      ? nilaiCpmk.reduce((sum, n) => sum + n.nilai, 0) / nilaiCpmk.length 
-      : 0;
+    const { data } = await api.get<ApiResponse<DashboardStats>>("/dashboard", { params });
     
-    result[cpmk.kode_mk].push({
-      kode_cpmk: cpmk.kode_cpmk,
-      rata_rata: Math.round(rataRata * 100) / 100,
-      jumlah_mahasiswa: nilaiCpmk.length
+    console.log('📦 [Dashboard Service] Raw API response:', data);
+    console.log('🔍 [Dashboard Service] Response success:', data.success);
+    console.log('📊 [Dashboard Service] Response data exists:', !!data.data);
+    
+    const result = unwrapResponse(data);
+    
+    console.log('✅ [Dashboard Service] Unwrapped result:', result);
+    console.log('📈 [Dashboard Service] Stats structure:', {
+      has_kurikulum: !!result?.kurikulum,
+      has_summary: !!result?.summary,
+      has_statistics: !!result?.statistics,
+      has_matrix: !!result?.matrix
     });
-  });
-  
-  return result;
+    console.log('🔢 [Dashboard Service] Summary values:', result?.summary);
+    console.log('🟢 [Dashboard Service] ========== FETCH SUCCESS ==========\n');
+    
+    return result;
+  } catch (error) {
+    console.error('❌ [Dashboard Service] ========== FETCH ERROR ==========');
+    console.error('💥 [Dashboard Service] Error details:', error);
+    if (error instanceof Error) {
+      console.error('📛 [Dashboard Service] Error message:', error.message);
+      console.error('📚 [Dashboard Service] Error stack:', error.stack);
+    }
+    console.error('❌ [Dashboard Service] ========== ERROR END ==========\n');
+    throw error;
+  }
+}
+
+/**
+ * Fetch recent activities
+ * @param limit - Number of activities to fetch
+ */
+export async function fetchRecentActivities(limit: number = 10): Promise<RecentActivity[]> {
+  try {
+    console.log('🔔 [Activities Service] Fetching recent activities...');
+    console.log('🔔 [Activities Service] Limit:', limit);
+    
+    const { data } = await api.get<ApiResponse<RecentActivity[]>>("/dashboard/recent", {
+      params: { limit },
+    });
+    
+    console.log('🔔 [Activities Service] Response:', data);
+    const result = unwrapResponse(data);
+    console.log('✅ [Activities Service] Activities count:', result?.length || 0);
+    
+    return result;
+  } catch (error) {
+    console.warn('⚠️ [Activities Service] Failed to fetch activities:', error);
+    console.log('🔔 [Activities Service] Returning empty array (endpoint might not be implemented)');
+    // Return empty array if not implemented
+    return [];
+  }
 }

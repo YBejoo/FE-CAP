@@ -86,6 +86,9 @@ export default function MataKuliahPage() {
   const [penugasanMK, setPenugasanMK] = useState<MataKuliah | null>(null);
   const [selectedDosenIds, setSelectedDosenIds] = useState<string[]>([]);
   
+  // State untuk menyimpan dosen pengampu per mata kuliah
+  const [dosenPengampuMap, setDosenPengampuMap] = useState<Record<string, Dosen[]>>({});
+  
   // Tab state for MK List vs Matrix
   const [activeTab, setActiveTab] = useState<"list" | "matrix">("list");
   
@@ -232,12 +235,18 @@ export default function MataKuliahPage() {
     return Object.values(matrixMappings).filter((mks) => mks.includes(mkKode)).length;
   };
 
+  // Helper function untuk mendapatkan dosen pengampu (prioritas dari map state, fallback ke data asli)
+  const getDosenPengampu = (mk: MataKuliah): Dosen[] => {
+    return dosenPengampuMap[mk.kode_mk] || mk.dosen_pengampu || [];
+  };
+
   // Penugasan Dosen functions
   const [dosenSearchTerm, setDosenSearchTerm] = useState("");
   
   const openPenugasanDialog = (mk: MataKuliah) => {
     setPenugasanMK(mk);
-    setSelectedDosenIds(mk.dosen_pengampu?.map(d => d.id_dosen) || []);
+    const currentDosen = dosenPengampuMap[mk.kode_mk] || mk.dosen_pengampu || [];
+    setSelectedDosenIds(currentDosen.map(d => d.id_dosen));
     setDosenSearchTerm("");
     setIsPenugasanDialogOpen(true);
   };
@@ -270,14 +279,15 @@ export default function MataKuliahPage() {
 
   const savePenugasanDosen = () => {
     if (penugasanMK) {
-      const selectedDosen = dosenList.filter(d => selectedDosenIds.includes(d.id_dosen));
-      setMataKuliahList(prev => 
-        prev.map(mk => 
-          mk.kode_mk === penugasanMK.kode_mk
-            ? { ...mk, dosen_pengampu: selectedDosen }
-            : mk
-        )
-      );
+      // Menyimpan urutan dosen sesuai selectedDosenIds (dosen pertama = PJ)
+      const selectedDosen = selectedDosenIds
+        .map(id => dosenList.find(d => d.id_dosen === id))
+        .filter((d): d is Dosen => d !== undefined);
+      
+      setDosenPengampuMap(prev => ({
+        ...prev,
+        [penugasanMK.kode_mk]: selectedDosen
+      }));
       closePenugasanDialog();
     }
   };
@@ -295,54 +305,6 @@ export default function MataKuliahPage() {
 
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total MK</p>
-                <p className="text-2xl font-bold">{mataKuliahList.length}</p>
-              </div>
-              <Icons.Book className="h-8 w-8 text-muted-foreground/50" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">MK Wajib</p>
-                <p className="text-2xl font-bold">{mataKuliahList.filter(mk => mk.sifat === "Wajib").length}</p>
-              </div>
-              <Badge>Wajib</Badge>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">MK Pilihan</p>
-                <p className="text-2xl font-bold">{mataKuliahList.filter(mk => mk.sifat === "Pilihan").length}</p>
-              </div>
-              <Badge variant="secondary">Pilihan</Badge>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total SKS</p>
-                <p className="text-2xl font-bold">{mataKuliahList.reduce((sum, mk) => sum + mk.sks, 0)}</p>
-              </div>
-              <Icons.FileText className="h-8 w-8 text-muted-foreground/50" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Tab Navigation */}
       <Card>
         <CardContent className="p-4">
@@ -375,62 +337,57 @@ export default function MataKuliahPage() {
 
       {/* MK List Tab */}
       {activeTab === "list" && (
-        <>
-          {/* Action Bar */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-                <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full lg:w-auto">
-                  <div className="relative flex-1 max-w-sm">
-                    <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Cari mata kuliah..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-9"
-                    />
-                  </div>
-                  <Select value={filterSemester} onValueChange={setFilterSemester}>
-                    <SelectTrigger className="w-full sm:w-40">
-                      <SelectValue placeholder="Semester" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Semua Semester</SelectItem>
-                      {SEMESTER_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={filterSifat} onValueChange={setFilterSifat}>
-                    <SelectTrigger className="w-full sm:w-32">
-                      <SelectValue placeholder="Sifat" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Semua Sifat</SelectItem>
-                      {SIFAT_MK_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+        <Card>
+          <CardHeader>
+            <CardTitle>Daftar Mata Kuliah</CardTitle>
+            <CardDescription>
+              Total {filteredMK.length} mata kuliah ditemukan
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Search & Filter Bar */}
+            <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+              <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full lg:w-auto">
+                <div className="relative flex-1 max-w-sm">
+                  <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Cari mata kuliah..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9"
+                  />
                 </div>
+                <Select value={filterSemester} onValueChange={setFilterSemester}>
+                  <SelectTrigger className="w-full sm:w-40">
+                    <SelectValue placeholder="Semester" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Semester</SelectItem>
+                    {SEMESTER_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={filterSifat} onValueChange={setFilterSifat}>
+                  <SelectTrigger className="w-full sm:w-32">
+                    <SelectValue placeholder="Sifat" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Sifat</SelectItem>
+                    {SIFAT_MK_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          {/* Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Daftar Mata Kuliah</CardTitle>
-              <CardDescription>
-                Total {filteredMK.length} mata kuliah ditemukan
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
+            {/* Table */}
+            <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-24">Kode</TableHead>
@@ -512,7 +469,6 @@ export default function MataKuliahPage() {
               </Table>
             </CardContent>
           </Card>
-        </>
       )}
 
       {/* Matrix CPL-MK Tab */}
@@ -566,39 +522,44 @@ export default function MataKuliahPage() {
                           onClick={() => openPenugasanDialog(mk)}
                           className="w-full"
                         >
-                          {mk.dosen_pengampu && mk.dosen_pengampu.length > 0 ? (
-                            <div className="flex flex-col items-center gap-1">
-                              <div className="flex -space-x-2">
-                                {mk.dosen_pengampu.slice(0, 3).map((dosen, idx) => (
-                                  <div
-                                    key={dosen.id_dosen}
-                                    className="w-6 h-6 rounded-full bg-blue-500 border-2 border-white flex items-center justify-center text-[10px] text-white font-semibold"
-                                    title={dosen.nama_dosen}
-                                  >
-                                    {dosen.nama_dosen.charAt(0)}
-                                  </div>
-                                ))}
-                                {mk.dosen_pengampu.length > 3 && (
-                                  <div className="w-6 h-6 rounded-full bg-gray-400 border-2 border-white flex items-center justify-center text-[10px] text-white font-semibold">
-                                    +{mk.dosen_pengampu.length - 3}
-                                  </div>
-                                )}
+                          {(() => {
+                            const dosenPengampu = getDosenPengampu(mk);
+                            return dosenPengampu.length > 0 ? (
+                              <div className="flex flex-col items-center gap-1">
+                                <div className="flex -space-x-2">
+                                  {dosenPengampu.slice(0, 3).map((dosen, idx) => (
+                                    <div
+                                      key={dosen.id_dosen}
+                                      className={`w-6 h-6 rounded-full border-2 border-white flex items-center justify-center text-[10px] text-white font-semibold ${
+                                        idx === 0 ? 'bg-amber-500' : 'bg-blue-500'
+                                      }`}
+                                      title={`${dosen.nama_dosen}${idx === 0 ? ' (PJ)' : ''}`}
+                                    >
+                                      {dosen.nama_dosen.charAt(0)}
+                                    </div>
+                                  ))}
+                                  {dosenPengampu.length > 3 && (
+                                    <div className="w-6 h-6 rounded-full bg-gray-400 border-2 border-white flex items-center justify-center text-[10px] text-white font-semibold">
+                                      +{dosenPengampu.length - 3}
+                                    </div>
+                                  )}
+                                </div>
+                                <span className="text-[10px] text-muted-foreground">
+                                  {dosenPengampu.length} dosen
+                                </span>
                               </div>
-                              <span className="text-[10px] text-muted-foreground">
-                                {mk.dosen_pengampu.length} dosen
-                              </span>
-                            </div>
-                          ) : (
-                            <div className="flex flex-col items-center gap-1 py-1 px-2 rounded-md border-2 border-dashed border-amber-300 hover:border-amber-400 hover:bg-amber-100 transition-colors">
-                              <Icons.UserPlus size={14} className="text-amber-500" />
-                              <span className="text-[10px] text-amber-600">Tugaskan</span>
-                            </div>
-                          )}
+                            ) : (
+                              <div className="flex flex-col items-center gap-1 py-1 px-2 rounded-md border-2 border-dashed border-amber-300 hover:border-amber-400 hover:bg-amber-100 transition-colors">
+                                <Icons.UserPlus size={14} className="text-amber-500" />
+                                <span className="text-[10px] text-amber-600">Tugaskan</span>
+                              </div>
+                            );
+                          })()}
                         </button>
                       </td>
                     ))}
                     <td className="px-3 py-2 border-b border-l text-center text-sm font-semibold text-amber-700">
-                      {mataKuliahList.filter(mk => mk.dosen_pengampu && mk.dosen_pengampu.length > 0).length}/{mataKuliahList.length}
+                      {mataKuliahList.filter(mk => getDosenPengampu(mk).length > 0).length}/{mataKuliahList.length}
                     </td>
                   </tr>
                 </thead>
@@ -898,9 +859,13 @@ export default function MataKuliahPage() {
             </DialogTitle>
             <DialogDescription>
               {penugasanMK && (
-                <span>
-                  Tentukan dosen pengampu untuk <strong>{penugasanMK.kode_mk} - {penugasanMK.nama_mk}</strong>
-                </span>
+                <div className="space-y-1">
+                  <span>
+                    Tentukan dosen pengampu untuk <strong>{penugasanMK.kode_mk} - {penugasanMK.nama_mk}</strong>
+                  </span>
+                  <p className="text-xs text-amber-600 font-medium">
+                  </p>
+                </div>
               )}
             </DialogDescription>
           </DialogHeader>
@@ -948,17 +913,32 @@ export default function MataKuliahPage() {
                   {selectedDosenIds.map((dosenId, index) => {
                     const dosen = dosenList.find(d => d.id_dosen === dosenId);
                     if (!dosen) return null;
+                    const isPJ = index === 0;
                     return (
                       <div
                         key={dosen.id_dosen}
-                        className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg"
+                        className={`flex items-center gap-3 p-3 border rounded-lg ${
+                          isPJ ? 'bg-amber-50 border-amber-300' : 'bg-blue-50 border-blue-200'
+                        }`}
                       >
-                        <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold text-sm">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm ${
+                          isPJ ? 'bg-amber-500' : 'bg-blue-500'
+                        }`}>
                           {index + 1}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-semibold text-sm">{dosen.nama_dosen}</span>
+                            {isPJ && (
+                              <Badge className="text-xs bg-amber-500 hover:bg-amber-600">
+                                PJ
+                              </Badge>
+                            )}
+                            {!isPJ && (
+                              <Badge variant="secondary" className="text-xs">
+                                Anggota
+                              </Badge>
+                            )}
                             {dosen.jabatan_fungsional && (
                               <Badge variant="outline" className="text-xs">
                                 {dosen.jabatan_fungsional}
@@ -1045,6 +1025,21 @@ export default function MataKuliahPage() {
                   {dosenList.filter(d => !selectedDosenIds.includes(d.id_dosen)).length} dosen tersedia untuk ditugaskan
                 </p>
               )}
+            </div>
+
+            {/* Info PJ dan Anggota */}
+            <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+              <div className="flex gap-2">
+                <Icons.AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                <div className="text-xs text-amber-800">
+                  <p className="font-semibold mb-1">Tentang Peran Dosen:</p>
+                  <ul className="space-y-1 list-disc list-inside">
+                    <li><strong>PJ (Penanggung Jawab):</strong> Dosen pertama yang dipilih, bertanggung jawab penuh atas mata kuliah</li>
+                    <li><strong>Anggota:</strong> Dosen kedua dan seterusnya, membantu PJ dalam pelaksanaan mata kuliah</li>
+                  </ul>
+                  <p className="mt-2 text-amber-700">Anda dapat mengubah urutan dengan menghapus dan menambahkan ulang dosen.</p>
+                </div>
+              </div>
             </div>
           </div>
 

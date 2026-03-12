@@ -70,14 +70,6 @@ export default function EvaluasiPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Evaluasi Pembelajaran</h1>
-        <p className="text-slate-600 dark:text-slate-400">
-          Analisis nilai mahasiswa per mata kuliah dan per mahasiswa
-        </p>
-      </div>
-
       {/* Section 1: Evaluasi Per Mata Kuliah */}
       <Card className="shadow-sm hover:shadow-md transition-shadow border-2">
         <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-b">

@@ -1,11 +1,28 @@
-# 🤖 SI-CAP Backend Development Agent Guide
+# 🤖 SI-CAP Frontend Development Agent Guide
 
 ## 📋 Project Overview
 
 **Project:** SI-CAP (Sistem Informasi Capaian Pembelajaran)  
-**Purpose:** Backend API untuk manajemen RPS, CPMK, dan CPL berbasis OBE (Outcome-Based Education)  
-**Tech Stack:** Bun + Hono + Drizzle ORM + Cloudflare Workers + D1 Database
-**Status:** ✅ Production Ready (All Newman Tests Passing)
+**Purpose:** Frontend aplikasi manajemen RPS, CPMK, dan CPL berbasis OBE (Outcome-Based Education)  
+**Tech Stack:** React Router v7 + TypeScript + Tailwind CSS v4 + Vite  
+**Status:** ✅ In Development - UI Consolidation Phase Complete
+
+---
+
+## 🎯 Project Context
+
+**Sistem Informasi Capaian Pembelajaran (SI-CAP)** adalah aplikasi web untuk mengelola kurikulum akademik berbasis **Outcome-Based Education (OBE)**. Aplikasi ini dirancang untuk Program Studi Manajemen Informatika, Universitas Sriwijaya, dengan fitur utama pengelolaan:
+
+- **Kurikulum** - Master kurikulum program studi
+- **Profil Lulusan (PL)** - Profil kompetensi lulusan
+- **Kompetensi Utama Lulusan (KUL)** - Kompetensi dengan aspek S, P, KU, KK
+- **Capaian Pembelajaran Lulusan (CPL)** - Learning outcomes dengan aspek S, P, KU, KK
+- **Bahan Kajian (BK)** - Materi pembelajaran
+- **Mata Kuliah (MK)** - Course dengan penugasan dosen (PJ & Anggota)
+- **CPMK & Sub-CPMK** - Course learning outcomes
+- **RPS** - Rencana Pembelajaran Semester
+- **Matrix CPL-PL, CPL-BK, CPL-MK** - Pemetaan hubungan antar entitas
+- **Dashboard & Laporan** - Visualisasi data dan reporting
 
 ---
 

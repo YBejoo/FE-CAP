@@ -1,39 +1,50 @@
-import type { ProfilLulusan, ProfilLulusanForm } from "~/types";
-import { dummyProfilLulusan } from "~/data/dummy-data";
+import api from "~/lib/api";
+import type { ApiResponse, ProfilLulusan, ProfilLulusanForm } from "~/types";
+import { toDate, unwrapResponse } from "~/services/utils";
 
-// Using dummy data for now
-let profilData = [...dummyProfilLulusan];
+type BackendProfilLulusan = {
+  id: string;
+  kode_profil: string;
+  profil_lulusan: string;
+  deskripsi: string;
+  sumber: string;
+  id_kurikulum: string;
+  created_at?: string | number | Date | null;
+  updated_at?: string | number | Date | null;
+};
 
-export async function fetchProfilLulusanList(): Promise<ProfilLulusan[]> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  return [...profilData];
+const mapProfilLulusan = (item: BackendProfilLulusan): ProfilLulusan => ({
+  id_profil: item.id,
+  kode_profil: item.kode_profil,
+  profil_lulusan: item.profil_lulusan,
+  deskripsi: item.deskripsi,
+  sumber: item.sumber,
+  id_kurikulum: item.id_kurikulum,
+  created_at: toDate(item.created_at),
+  updated_at: toDate(item.updated_at),
+});
+
+export async function fetchProfilLulusanList(params?: { id_kurikulum?: string }): Promise<ProfilLulusan[]> {
+  const queryParams: any = {};
+  if (params?.id_kurikulum) queryParams.id_kurikulum = params.id_kurikulum;
+  
+  const { data } = await api.get<ApiResponse<BackendProfilLulusan[]>>("/profil-lulusan", {
+    params: Object.keys(queryParams).length > 0 ? queryParams : undefined,
+  });
+  const items = unwrapResponse(data) ?? [];
+  return items.map(mapProfilLulusan);
 }
 
 export async function createProfilLulusan(payload: ProfilLulusanForm): Promise<ProfilLulusan> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  const newProfil: ProfilLulusan = {
-    id_profil: `pl-${Date.now()}`,
-    ...payload,
-    created_at: new Date(),
-    updated_at: new Date(),
-  };
-  profilData.push(newProfil);
-  return newProfil;
+  const { data } = await api.post<ApiResponse<BackendProfilLulusan>>("/profil-lulusan", payload);
+  return mapProfilLulusan(unwrapResponse(data));
 }
 
 export async function updateProfilLulusan(id: string, payload: Partial<ProfilLulusanForm>): Promise<ProfilLulusan> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  const index = profilData.findIndex((p) => p.id_profil === id);
-  if (index === -1) throw new Error("Profil Lulusan not found");
-  profilData[index] = {
-    ...profilData[index],
-    ...payload,
-    updated_at: new Date(),
-  };
-  return profilData[index];
+  const { data } = await api.put<ApiResponse<BackendProfilLulusan>>(`/profil-lulusan/${id}`, payload);
+  return mapProfilLulusan(unwrapResponse(data));
 }
 
 export async function deleteProfilLulusan(id: string): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  profilData = profilData.filter((p) => p.id_profil !== id);
+  await api.delete(`/profil-lulusan/${id}`);
 }

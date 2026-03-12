@@ -1,10 +1,11 @@
-import type { Mahasiswa } from "~/types";
-import { dummyMahasiswa } from "~/data/dummy-data";
+import api from "~/lib/api";
+import type { ApiResponse, Mahasiswa } from "~/types";
+import { unwrapResponse } from "~/services/utils";
 
-// Using dummy data for now
-let mahasiswaData = [...dummyMahasiswa];
+// Mahasiswa service - not yet implemented in backend
+// Returns empty array for now
 
 export async function fetchMahasiswaList(): Promise<Mahasiswa[]> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  return [...mahasiswaData];
+  // Not yet implemented in backend
+  return [];
 }

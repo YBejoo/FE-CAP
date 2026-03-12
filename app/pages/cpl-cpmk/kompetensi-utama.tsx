@@ -180,37 +180,37 @@ export default function KompetensiUtamaPage() {
 
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total KUL</p>
-                <p className="text-2xl font-bold">{kulList.length}</p>
-              </div>
-              <Icons.Award className="h-8 w-8 text-muted-foreground/50" />
-            </div>
-          </CardContent>
-        </Card>
-        {aspekStats.map((stat) => (
-          <Card key={stat.value}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">{stat.value}</p>
-                  <p className="text-2xl font-bold">{stat.count}</p>
-                </div>
-                <AspekBadge aspek={stat.value as AspekKUL} />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Action Bar */}
+      {/* Single Card: Keterangan, Search & Table */}
       <Card>
-        <CardContent className="p-4">
+        <CardHeader>
+          <CardTitle>Daftar Kompetensi Utama Lulusan</CardTitle>
+          <CardDescription>
+            Total {filteredKUL.length} kompetensi utama lulusan ditemukan
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Legend */}
+          <div className="p-4 bg-gray-50 rounded-lg border">
+            <div className="flex flex-wrap gap-4 items-center">
+              <span className="text-sm font-medium text-muted-foreground">Keterangan Aspek:</span>
+              <div className="flex flex-wrap gap-3">
+                <span className="inline-flex items-center gap-1.5 text-sm">
+                  <AspekBadge aspek="S" /> Sikap
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-sm">
+                  <AspekBadge aspek="P" /> Pengetahuan
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-sm">
+                  <AspekBadge aspek="KU" /> Keterampilan Umum
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-sm">
+                  <AspekBadge aspek="KK" /> Keterampilan Khusus
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Search & Filter Bar */}
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
             <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full sm:w-auto">
               <div className="relative flex-1 max-w-sm">
@@ -241,41 +241,8 @@ export default function KompetensiUtamaPage() {
               Tambah KUL
             </Button>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Legend */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-wrap gap-4 items-center">
-            <span className="text-sm font-medium text-muted-foreground">Keterangan Aspek:</span>
-            <div className="flex flex-wrap gap-3">
-              <span className="inline-flex items-center gap-1.5 text-sm">
-                <AspekBadge aspek="S" /> Sikap
-              </span>
-              <span className="inline-flex items-center gap-1.5 text-sm">
-                <AspekBadge aspek="P" /> Pengetahuan
-              </span>
-              <span className="inline-flex items-center gap-1.5 text-sm">
-                <AspekBadge aspek="KU" /> Keterampilan Umum
-              </span>
-              <span className="inline-flex items-center gap-1.5 text-sm">
-                <AspekBadge aspek="KK" /> Keterampilan Khusus
-              </span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Daftar Kompetensi Utama Lulusan</CardTitle>
-          <CardDescription>
-            Total {filteredKUL.length} kompetensi utama lulusan ditemukan
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+          {/* Table */}
           <Table>
             <TableHeader>
               <TableRow>

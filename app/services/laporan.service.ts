@@ -1,4 +1,6 @@
-import { dummyMataKuliah, dummyCPMK, dummyCPL, dummyKurikulum } from "~/data/dummy-data";
+import api from "~/lib/api";
+import type { ApiResponse } from "~/types";
+import { unwrapResponse } from "~/services/utils";
 
 type LaporanPerMK = {
   kode_mk: string;
@@ -23,63 +25,25 @@ type LaporanPerTahun = {
 };
 
 export async function fetchLaporanPerMK(idKurikulum?: string): Promise<LaporanPerMK[]> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  
-  return dummyMataKuliah.map((mk) => {
-    const cpmkList = dummyCPMK.filter((c) => c.kode_mk === mk.kode_mk);
-    const uniqueCpl = new Set(cpmkList.map((c) => c.id_cpl));
-    const avgBobot = cpmkList.length > 0
-      ? cpmkList.reduce((sum, c) => sum + c.bobot_persentase, 0) / cpmkList.length
-      : 0;
-    
-    return {
-      kode_mk: mk.kode_mk,
-      nama_mk: mk.nama_mk,
-      total_cpmk: cpmkList.length,
-      total_cpl: uniqueCpl.size,
-      rata_rata_bobot: Math.round(avgBobot * 100) / 100,
-    };
-  });
+  const params = idKurikulum ? { id_kurikulum: idKurikulum } : undefined;
+  const { data } = await api.get<ApiResponse<LaporanPerMK[]>>("/laporan/matrix-cpl-mk", { params });
+  return unwrapResponse(data) ?? [];
 }
 
 export async function fetchLaporanPerCPL(idKurikulum?: string, idMk?: string): Promise<LaporanPerCPL[]> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
+  const params: any = {};
+  if (idKurikulum) params.id_kurikulum = idKurikulum;
+  if (idMk) params.id_mk = idMk;
   
-  return dummyCPL.map((cpl) => {
-    const relatedCpmk = dummyCPMK.filter((c) => c.id_cpl === cpl.id_cpl);
-    const uniqueMK = new Set(relatedCpmk.map((c) => c.kode_mk));
-    const avgBobot = relatedCpmk.length > 0
-      ? relatedCpmk.reduce((sum, c) => sum + c.bobot_persentase, 0) / relatedCpmk.length
-      : 0;
-    
-    return {
-      id_cpl: cpl.id_cpl,
-      nama_cpl: cpl.deskripsi_cpl,
-      bobot: Math.round(avgBobot * 100) / 100,
-      total_mk: uniqueMK.size,
-    };
+  const { data } = await api.get<ApiResponse<LaporanPerCPL[]>>("/laporan/progress-cpl", {
+    params: Object.keys(params).length > 0 ? params : undefined,
   });
+  return unwrapResponse(data) ?? [];
 }
 
 export async function fetchLaporanPerTahun(idKurikulum?: string): Promise<LaporanPerTahun[]> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  
-  const grouped = dummyKurikulum.reduce((acc, kur) => {
-    if (!acc[kur.tahun_berlaku]) {
-      acc[kur.tahun_berlaku] = {
-        tahun: kur.tahun_berlaku,
-        total_kurikulum: 0,
-        total_cpl: 0,
-        total_mk: 0,
-      };
-    }
-    acc[kur.tahun_berlaku].total_kurikulum++;
-    acc[kur.tahun_berlaku].total_cpl += dummyCPL.filter((c) => c.id_kurikulum === kur.id_kurikulum).length;
-    acc[kur.tahun_berlaku].total_mk += dummyMataKuliah.filter((m) => m.id_kurikulum === kur.id_kurikulum).length;
-    return acc;
-  }, {} as Record<number, LaporanPerTahun>);
-  
-  return Object.values(grouped);
+  // Not yet implemented in backend, return empty array
+  return [];
 }
 
 export type { LaporanPerMK, LaporanPerCPL, LaporanPerTahun };

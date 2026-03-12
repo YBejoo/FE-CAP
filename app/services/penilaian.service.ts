@@ -1,39 +1,26 @@
-import type { Penilaian, PenilaianForm } from "~/types";
-import { dummyPenilaian } from "~/data/dummy-data";
+import api from "~/lib/api";
+import type { ApiResponse, Penilaian, PenilaianForm } from "~/types";
+import { unwrapResponse } from "~/services/utils";
 
-// Using dummy data for now
-let penilaianData = [...dummyPenilaian];
+// Penilaian service - not yet implemented in backend
+// Returns empty array for now
 
 export async function fetchPenilaianList(): Promise<Penilaian[]> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  return [...penilaianData];
+  // Not yet implemented in backend
+  return [];
 }
 
 export async function createPenilaian(payload: PenilaianForm): Promise<Penilaian> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  const newPenilaian: Penilaian = {
-    id_penilaian: `pen-${Date.now()}`,
-    ...payload,
-    created_at: new Date(),
-    updated_at: new Date(),
-  };
-  penilaianData.push(newPenilaian);
-  return newPenilaian;
+  // Not yet implemented in backend
+  throw new Error("Penilaian API not yet implemented");
 }
 
 export async function updatePenilaian(id: string, payload: Partial<PenilaianForm>): Promise<Penilaian> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  const index = penilaianData.findIndex((p) => p.id_penilaian === id);
-  if (index === -1) throw new Error("Penilaian not found");
-  penilaianData[index] = {
-    ...penilaianData[index],
-    ...payload,
-    updated_at: new Date(),
-  };
-  return penilaianData[index];
+  // Not yet implemented in backend
+  throw new Error("Penilaian API not yet implemented");
 }
 
 export async function deletePenilaian(id: string): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  penilaianData = penilaianData.filter((p) => p.id_penilaian !== id);
+  // Not yet implemented in backend
+  throw new Error("Penilaian API not yet implemented");
 }

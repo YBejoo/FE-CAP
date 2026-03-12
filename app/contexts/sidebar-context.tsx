@@ -16,6 +16,7 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
 
   // Load from localStorage on mount
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     const saved = localStorage.getItem("sidebar-collapsed");
     if (saved !== null) {
       setCollapsed(JSON.parse(saved));
@@ -24,6 +25,7 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
 
   // Save to localStorage when collapsed changes
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     localStorage.setItem("sidebar-collapsed", JSON.stringify(isCollapsed));
   }, [isCollapsed]);
 

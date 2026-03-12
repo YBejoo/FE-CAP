@@ -135,35 +135,16 @@ export default function ProfilLulusanPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Profil</p>
-                <p className="text-2xl font-bold">{profilList.length}</p>
-              </div>
-              <Icons.GraduationCap className="h-8 w-8 text-muted-foreground/50" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Kurikulum Aktif</p>
-                <p className="text-2xl font-bold">2024</p>
-              </div>
-              <Icons.BookOpen className="h-8 w-8 text-muted-foreground/50" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Action Bar */}
+      {/* Single Card: Search & Table */}
       <Card>
-        <CardContent className="p-4">
+        <CardHeader>
+          <CardTitle>Daftar Profil Lulusan</CardTitle>
+          <CardDescription>
+            Total {filteredProfil.length} profil lulusan ditemukan
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Search & Button Bar */}
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
             <div className="relative flex-1 max-w-sm">
               <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -179,18 +160,8 @@ export default function ProfilLulusanPage() {
               Tambah Profil Lulusan
             </Button>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Daftar Profil Lulusan</CardTitle>
-          <CardDescription>
-            Total {filteredProfil.length} profil lulusan ditemukan
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+          {/* Table */}
           <Table>
             <TableHeader>
               <TableRow>

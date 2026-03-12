@@ -81,8 +81,6 @@ export default function KurikulumPage() {
 
   // Handle form submit
   const handleSubmit = async () => {
-    console.log("handleSubmit called", formData);
-    
     if (!formData.nama_kurikulum.trim()) {
       alert("Nama kurikulum harus diisi.");
       return;
@@ -118,7 +116,6 @@ export default function KurikulumPage() {
 
   // Handle toggle active (bisa lebih dari 1 kurikulum aktif)
   const handleToggleActive = async (id: string) => {
-    console.log("handleToggleActive called with id:", id);
     const target = kurikulums.find((k) => k.id_kurikulum === id);
     if (!target) return;
     if (!target.is_active) {
@@ -130,7 +127,6 @@ export default function KurikulumPage() {
 
   // Handle copy/duplicate
   const handleCopy = async (kurikulum: Kurikulum) => {
-    console.log("handleCopy called with:", kurikulum);
     await createKurikulum({
       nama_kurikulum: `${kurikulum.nama_kurikulum} (Copy)`,
       tahun_berlaku: new Date().getFullYear(),
@@ -141,7 +137,6 @@ export default function KurikulumPage() {
 
   // Handle delete
   const handleDelete = async () => {
-    console.log("handleDelete called");
     if (deletingKurikulum) {
       await deleteKurikulum(deletingKurikulum.id_kurikulum);
       setIsDeleteDialogOpen(false);
@@ -151,7 +146,6 @@ export default function KurikulumPage() {
 
   // Open dialog for add/edit
   const openDialog = (kurikulum?: Kurikulum) => {
-    console.log("openDialog called with:", kurikulum);
     if (kurikulum) {
       setEditingKurikulum(kurikulum);
       setFormData({
@@ -194,9 +188,16 @@ export default function KurikulumPage() {
 
   return (
     <div className="space-y-4">
-        {/* Action Bar */}
+        {/* Single Card: Search, Filter & Table */}
         <Card>
-          <CardContent className="p-4">
+          <CardHeader>
+            <CardTitle>Daftar Kurikulum</CardTitle>
+            <CardDescription>
+              Total {filteredKurikulums.length} kurikulum ditemukan
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Search & Filter Bar */}
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
               <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full sm:w-auto">
                 {/* Search */}
@@ -227,7 +228,6 @@ export default function KurikulumPage() {
               <Button 
                 type="button" 
                 onClick={() => {
-                  console.log("Tambah Kurikulum clicked, prodiList:", prodiList);
                   if (prodiList.length === 0) {
                     alert("Silakan tambahkan data Program Studi terlebih dahulu di menu Prodi.");
                     return;
@@ -239,18 +239,8 @@ export default function KurikulumPage() {
                 Tambah Kurikulum
               </Button>
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Daftar Kurikulum</CardTitle>
-            <CardDescription>
-              Total {filteredKurikulums.length} kurikulum ditemukan
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+            {/* Table */}
             <Table>
               <TableHeader>
                 <TableRow>
@@ -281,17 +271,15 @@ export default function KurikulumPage() {
                         <StatusBadge isActive={kurikulum.is_active} />
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center justify-end gap-2" style={{ position: 'relative', zIndex: 1 }}>
+                        <div className="flex items-center justify-end gap-2">
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              console.log("Edit button clicked");
                               openDialog(kurikulum);
                             }}
-                            style={{ cursor: 'pointer' }}
                           >
                             <Icons.Edit size={14} className="mr-1" />
                             Edit
@@ -302,10 +290,8 @@ export default function KurikulumPage() {
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              console.log("Copy button clicked");
                               handleCopy(kurikulum);
                             }}
-                            style={{ cursor: 'pointer' }}
                           >
                             <Icons.Copy size={14} className="mr-1" />
                             Salin
@@ -317,10 +303,8 @@ export default function KurikulumPage() {
                             className={kurikulum.is_active ? "text-green-600 hover:text-green-700" : "text-orange-600 hover:text-orange-700"}
                             onClick={(e) => {
                               e.stopPropagation();
-                              console.log("Toggle active button clicked");
                               handleToggleActive(kurikulum.id_kurikulum);
                             }}
-                            style={{ cursor: 'pointer' }}
                           >
                             <Icons.Power size={14} className="mr-1" />
                             {kurikulum.is_active ? "Nonaktifkan" : "Aktifkan"}
@@ -333,11 +317,9 @@ export default function KurikulumPage() {
                               className="text-destructive hover:text-destructive"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                console.log("Delete button clicked");
                                 setDeletingKurikulum(kurikulum);
                                 setIsDeleteDialogOpen(true);
                               }}
-                              style={{ cursor: 'pointer' }}
                             >
                               <Icons.Trash size={14} />
                             </Button>

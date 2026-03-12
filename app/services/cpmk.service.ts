@@ -1,75 +1,94 @@
-import type { CPMK, CPMKForm, SubCPMK, SubCPMKForm } from "~/types";
-import { dummyCPMK, dummySubCPMK } from "~/data/dummy-data";
+import api from "~/lib/api";
+import type { ApiResponse, CPMK, CPMKForm, SubCPMK, SubCPMKForm } from "~/types";
+import { toDate, unwrapResponse } from "~/services/utils";
 
-// Using dummy data for now
-let cpmkData = [...dummyCPMK];
-let subCpmkData = [...dummySubCPMK];
+type BackendCpmk = {
+  id: string;
+  kode_cpmk: string;
+  deskripsi_cpmk: string;
+  bobot_persentase: number;
+  kode_mk?: string;
+  id_mk?: string;
+  id_cpl: string;
+  created_at?: string | number | Date | null;
+  updated_at?: string | number | Date | null;
+};
 
-export async function fetchCpmkList(): Promise<CPMK[]> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  return [...cpmkData];
+type BackendSubCpmk = {
+  id: string;
+  kode_sub: string;
+  deskripsi_sub_cpmk: string;
+  indikator: string;
+  kriteria_penilaian: string;
+  id_cpmk: string;
+  created_at?: string | number | Date | null;
+  updated_at?: string | number | Date | null;
+};
+
+const mapCpmk = (item: BackendCpmk): CPMK => ({
+  id_cpmk: item.id,
+  kode_cpmk: item.kode_cpmk,
+  deskripsi_cpmk: item.deskripsi_cpmk,
+  bobot_persentase: item.bobot_persentase,
+  kode_mk: item.kode_mk,
+  id_mk: item.id_mk,
+  id_cpl: item.id_cpl,
+  created_at: toDate(item.created_at),
+  updated_at: toDate(item.updated_at),
+});
+
+const mapSubCpmk = (item: BackendSubCpmk): SubCPMK => ({
+  id_sub_cpmk: item.id,
+  kode_sub: item.kode_sub,
+  deskripsi_sub_cpmk: item.deskripsi_sub_cpmk,
+  indikator: item.indikator,
+  kriteria_penilaian: item.kriteria_penilaian,
+  id_cpmk: item.id_cpmk,
+  created_at: toDate(item.created_at),
+  updated_at: toDate(item.updated_at),
+});
+
+export async function fetchCpmkList(params?: { id_mk?: string }): Promise<CPMK[]> {
+  const queryParams: any = {};
+  if (params?.id_mk) queryParams.id_mk = params.id_mk;
+  
+  const { data } = await api.get<ApiResponse<BackendCpmk[]>>("/cpmk", {
+    params: Object.keys(queryParams).length > 0 ? queryParams : undefined,
+  });
+  const items = unwrapResponse(data) ?? [];
+  return items.map(mapCpmk);
 }
 
 export async function fetchCpmkByMataKuliah(id: string): Promise<CPMK[]> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  return cpmkData.filter((cpmk) => cpmk.id_mk === id || cpmk.kode_mk === id);
+  const { data } = await api.get<ApiResponse<BackendCpmk[]>>(`/cpmk/mata-kuliah/${id}`);
+  const items = unwrapResponse(data) ?? [];
+  return items.map(mapCpmk);
 }
 
 export async function createCpmk(payload: CPMKForm): Promise<CPMK> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  const newCPMK: CPMK = {
-    id_cpmk: `cpmk-${Date.now()}`,
-    ...payload,
-    created_at: new Date(),
-    updated_at: new Date(),
-  };
-  cpmkData.push(newCPMK);
-  return newCPMK;
+  const { data } = await api.post<ApiResponse<BackendCpmk>>("/cpmk", payload);
+  return mapCpmk(unwrapResponse(data));
 }
 
 export async function updateCpmk(id: string, payload: Partial<CPMKForm>): Promise<CPMK> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  const index = cpmkData.findIndex((c) => c.id_cpmk === id);
-  if (index === -1) throw new Error("CPMK not found");
-  cpmkData[index] = {
-    ...cpmkData[index],
-    ...payload,
-    updated_at: new Date(),
-  };
-  return cpmkData[index];
+  const { data } = await api.put<ApiResponse<BackendCpmk>>(`/cpmk/${id}`, payload);
+  return mapCpmk(unwrapResponse(data));
 }
 
 export async function deleteCpmk(id: string): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  cpmkData = cpmkData.filter((c) => c.id_cpmk !== id);
+  await api.delete(`/cpmk/${id}`);
 }
 
 export async function createSubCpmk(idCpmk: string, payload: SubCPMKForm): Promise<SubCPMK> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  const newSub: SubCPMK = {
-    id_sub_cpmk: `sub-${Date.now()}`,
-    ...payload,
-    id_cpmk: idCpmk,
-    created_at: new Date(),
-    updated_at: new Date(),
-  };
-  subCpmkData.push(newSub);
-  return newSub;
+  const { data } = await api.post<ApiResponse<BackendSubCpmk>>(`/cpmk/${idCpmk}/sub`, payload);
+  return mapSubCpmk(unwrapResponse(data));
 }
 
 export async function updateSubCpmk(idCpmk: string, idSub: string, payload: Partial<SubCPMKForm>): Promise<SubCPMK> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  const index = subCpmkData.findIndex((s) => s.id_sub_cpmk === idSub && s.id_cpmk === idCpmk);
-  if (index === -1) throw new Error("Sub-CPMK not found");
-  subCpmkData[index] = {
-    ...subCpmkData[index],
-    ...payload,
-    updated_at: new Date(),
-  };
-  return subCpmkData[index];
+  const { data } = await api.put<ApiResponse<BackendSubCpmk>>(`/cpmk/${idCpmk}/sub/${idSub}`, payload);
+  return mapSubCpmk(unwrapResponse(data));
 }
 
 export async function deleteSubCpmk(idCpmk: string, idSub: string): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  subCpmkData = subCpmkData.filter((s) => s.id_sub_cpmk !== idSub || s.id_cpmk !== idCpmk);
+  await api.delete(`/cpmk/${idCpmk}/sub/${idSub}`);
 }

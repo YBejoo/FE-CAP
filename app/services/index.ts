@@ -1,3 +1,4 @@
+export * from "./auth.service";
 export * from "./cpl.service";
 export * from "./profil-lulusan.service";
 export * from "./bahan-kajian.service";

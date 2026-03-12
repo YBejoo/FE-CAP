@@ -29,22 +29,22 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui";
-import type { BahanKajian, AspekKUL, CPL } from "~/types";
-import { ASPEK_KUL_OPTIONS } from "~/lib/constants";
-import { useBahanKajian } from "~/hooks/useBahanKajian";
+import type { CPL, AspekCPL, ProfilLulusan } from "~/types";
+import { ASPEK_CPL_OPTIONS } from "~/lib/constants";
 import { useCpl } from "~/hooks/useCpl";
+import { useProfilLulusan } from "~/hooks/useProfilLulusan";
 
 
 // Aspek Badge Component
-function AspekBadge({ aspek }: { aspek: AspekKUL }) {
-  const colors: Record<AspekKUL, string> = {
+function AspekBadge({ aspek }: { aspek: AspekCPL }) {
+  const colors: Record<AspekCPL, string> = {
     S: "bg-blue-100 text-blue-700",
     P: "bg-purple-100 text-purple-700",
     KU: "bg-amber-100 text-amber-700",
     KK: "bg-green-100 text-green-700",
   };
   
-  const labels: Record<AspekKUL, string> = {
+  const labels: Record<AspekCPL, string> = {
     S: "Sikap",
     P: "Pengetahuan",
     KU: "Keterampilan Umum",
@@ -58,68 +58,64 @@ function AspekBadge({ aspek }: { aspek: AspekKUL }) {
   );
 }
 
-export default function BahanKajianPage() {
+export default function CPLPage() {
   const {
-    bkList,
+    cplList,
     loading,
-    createBahanKajian,
-    updateBahanKajian,
-    deleteBahanKajian,
-  } = useBahanKajian();
-  const { cplList } = useCpl();
+    createCpl,
+    updateCpl,
+    deleteCpl,
+  } = useCpl();
+  const { profilList: profilLulusanList } = useProfilLulusan();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterAspek, setFilterAspek] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingBK, setEditingBK] = useState<BahanKajian | null>(null);
+  const [editingCPL, setEditingCPL] = useState<CPL | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [deletingBK, setDeletingBK] = useState<BahanKajian | null>(null);
+  const [deletingCPL, setDeletingCPL] = useState<CPL | null>(null);
   
-  // Tab state for BK List vs Matrix
+  // Tab state for CPL List vs Matrix
   const [activeTab, setActiveTab] = useState<"list" | "matrix">("list");
   
-  // Matrix CPL-BK mappings (CPL -> BK[])
+  // Matrix CPL-PL mappings
   const [matrixMappings, setMatrixMappings] = useState<Record<string, string[]>>({});
 
   // Form state
   const [formData, setFormData] = useState({
-    kode_bk: "",
-    nama_bahan_kajian: "",
-    aspek: "P" as AspekKUL,
-    ranah_keilmuan: "",
+    kode_cpl: "",
+    aspek: "S" as AspekCPL,
+    deskripsi_cpl: "",
   });
 
-  // Filter Bahan Kajian
-  const filteredBK = bkList.filter((bk) => {
+  // Filter CPL
+  const filteredCPL = cplList.filter((c) => {
     const matchSearch =
-      bk.nama_bahan_kajian.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      bk.kode_bk.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      bk.ranah_keilmuan.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchAspek = filterAspek === "all" || bk.aspek === filterAspek;
+      c.kode_cpl.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.deskripsi_cpl.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchAspek = filterAspek === "all" || c.aspek === filterAspek;
     return matchSearch && matchAspek;
   });
 
   // Group by aspek for stats
-  const aspekStats = ASPEK_KUL_OPTIONS.map((opt) => ({
+  const aspekStats = ASPEK_CPL_OPTIONS.map((opt) => ({
     aspek: opt.label,
     value: opt.value,
-    count: bkList.filter((bk) => bk.aspek === opt.value).length,
+    count: cplList.filter((c) => c.aspek === opt.value).length,
   }));
 
   // Handle form submit
   const handleSubmit = async () => {
-    if (editingBK) {
-      await updateBahanKajian(editingBK.id_bahan_kajian, {
-        kode_bk: formData.kode_bk,
-        nama_bahan_kajian: formData.nama_bahan_kajian,
+    if (editingCPL) {
+      await updateCpl(editingCPL.id_cpl, {
+        kode_cpl: formData.kode_cpl,
         aspek: formData.aspek,
-        ranah_keilmuan: formData.ranah_keilmuan,
+        deskripsi_cpl: formData.deskripsi_cpl,
       });
     } else {
-      await createBahanKajian({
-        kode_bk: formData.kode_bk,
-        nama_bahan_kajian: formData.nama_bahan_kajian,
+      await createCpl({
+        kode_cpl: formData.kode_cpl,
         aspek: formData.aspek,
-        ranah_keilmuan: formData.ranah_keilmuan,
+        deskripsi_cpl: formData.deskripsi_cpl,
         id_kurikulum: "1",
       });
     }
@@ -128,31 +124,40 @@ export default function BahanKajianPage() {
 
   // Handle delete
   const handleDelete = async () => {
-    if (deletingBK) {
-      await deleteBahanKajian(deletingBK.id_bahan_kajian);
+    if (deletingCPL) {
+      await deleteCpl(deletingCPL.id_cpl);
       setIsDeleteDialogOpen(false);
-      setDeletingBK(null);
+      setDeletingCPL(null);
     }
   };
 
+  // Auto generate kode based on aspek
+  const generateKode = (aspek: AspekCPL) => {
+    const existingCodes = cplList.filter(c => c.aspek === aspek).map(c => c.kode_cpl);
+    let num = 1;
+    let newCode = `${aspek}${num}`;
+    while (existingCodes.includes(newCode)) {
+      num++;
+      newCode = `${aspek}${num}`;
+    }
+    return newCode;
+  };
+
   // Open dialog
-  const openDialog = (bk?: BahanKajian) => {
-    if (bk) {
-      setEditingBK(bk);
+  const openDialog = (cpl?: CPL) => {
+    if (cpl) {
+      setEditingCPL(cpl);
       setFormData({
-        kode_bk: bk.kode_bk,
-        nama_bahan_kajian: bk.nama_bahan_kajian,
-        aspek: bk.aspek,
-        ranah_keilmuan: bk.ranah_keilmuan,
+        kode_cpl: cpl.kode_cpl,
+        aspek: cpl.aspek,
+        deskripsi_cpl: cpl.deskripsi_cpl,
       });
     } else {
-      setEditingBK(null);
-      const nextCode = `BK-${String(bkList.length + 1).padStart(2, "0")}`;
+      setEditingCPL(null);
       setFormData({
-        kode_bk: nextCode,
-        nama_bahan_kajian: "",
-        aspek: "P",
-        ranah_keilmuan: "",
+        kode_cpl: "",
+        aspek: "S",
+        deskripsi_cpl: "",
       });
     }
     setIsDialogOpen(true);
@@ -161,37 +166,36 @@ export default function BahanKajianPage() {
   // Close dialog
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
-    setEditingBK(null);
+    setEditingCPL(null);
     setFormData({
-      kode_bk: "",
-      nama_bahan_kajian: "",
-      aspek: "P",
-      ranah_keilmuan: "",
+      kode_cpl: "",
+      aspek: "S",
+      deskripsi_cpl: "",
     });
   };
 
   // Matrix functions
-  const toggleMapping = (cplId: string, bkId: string) => {
+  const toggleMapping = (cplId: string, plId: string) => {
     setMatrixMappings((prev) => {
       const current = prev[cplId] || [];
-      if (current.includes(bkId)) {
-        return { ...prev, [cplId]: current.filter((id) => id !== bkId) };
+      if (current.includes(plId)) {
+        return { ...prev, [cplId]: current.filter((id) => id !== plId) };
       } else {
-        return { ...prev, [cplId]: [...current, bkId] };
+        return { ...prev, [cplId]: [...current, plId] };
       }
     });
   };
 
-  const hasMapping = (cplId: string, bkId: string) => {
-    return matrixMappings[cplId]?.includes(bkId) || false;
+  const hasMapping = (cplId: string, plId: string) => {
+    return matrixMappings[cplId]?.includes(plId) || false;
   };
 
   const countCPLMappings = (cplId: string) => {
     return matrixMappings[cplId]?.length || 0;
   };
 
-  const countBKMappings = (bkId: string) => {
-    return Object.values(matrixMappings).filter((bks) => bks.includes(bkId)).length;
+  const countPLMappings = (plId: string) => {
+    return Object.values(matrixMappings).filter((pls) => pls.includes(plId)).length;
   };
 
   if (loading) {
@@ -207,34 +211,6 @@ export default function BahanKajianPage() {
 
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total BK</p>
-                <p className="text-2xl font-bold">{bkList.length}</p>
-              </div>
-              <Icons.Layers className="h-8 w-8 text-muted-foreground/50" />
-            </div>
-          </CardContent>
-        </Card>
-        {aspekStats.map((stat) => (
-          <Card key={stat.value}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">{stat.value}</p>
-                  <p className="text-2xl font-bold">{stat.count}</p>
-                </div>
-                <AspekBadge aspek={stat.value as AspekKUL} />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
       {/* Tab Navigation */}
       <Card>
         <CardContent className="p-4">
@@ -245,64 +221,38 @@ export default function BahanKajianPage() {
                 onClick={() => setActiveTab("list")}
               >
                 <Icons.List size={16} className="mr-2" />
-                Daftar BK
+                Daftar CPL
               </Button>
               <Button
                 variant={activeTab === "matrix" ? "default" : "outline"}
                 onClick={() => setActiveTab("matrix")}
               >
                 <Icons.Grid3X3 size={16} className="mr-2" />
-                Matrix CPL-BK
+                Matrix CPL-PL
               </Button>
             </div>
             {activeTab === "list" && (
               <Button onClick={() => openDialog()}>
                 <Icons.Plus size={16} className="mr-2" />
-                Tambah BK
+                Tambah CPL
               </Button>
             )}
           </div>
         </CardContent>
       </Card>
 
-      {/* BK List Tab */}
+      {/* CPL List Tab */}
       {activeTab === "list" && (
-        <>
-          {/* Action Bar */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-                <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full sm:w-auto">
-                  <div className="relative flex-1 max-w-sm">
-                    <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Cari bahan kajian..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-9"
-                    />
-                  </div>
-                  <Select value={filterAspek} onValueChange={setFilterAspek}>
-                    <SelectTrigger className="w-full sm:w-48">
-                      <SelectValue placeholder="Filter Aspek" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Semua Aspek</SelectItem>
-                      {ASPEK_KUL_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Legend */}
-          <Card>
-            <CardContent className="p-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Daftar Capaian Pembelajaran Lulusan</CardTitle>
+            <CardDescription>
+              Total {filteredCPL.length} CPL ditemukan
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Legend */}
+            <div className="p-4 bg-gray-50 rounded-lg border">
               <div className="flex flex-wrap gap-4 items-center">
                 <span className="text-sm font-medium text-muted-foreground">Keterangan Aspek:</span>
                 <div className="flex flex-wrap gap-3">
@@ -320,54 +270,67 @@ export default function BahanKajianPage() {
                   </span>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          {/* Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Daftar Bahan Kajian</CardTitle>
-              <CardDescription>
-                Total {filteredBK.length} bahan kajian ditemukan
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
+            {/* Search & Filter */}
+            <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full sm:w-auto">
+              <div className="relative flex-1 max-w-sm">
+                <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Cari CPL..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Select value={filterAspek} onValueChange={setFilterAspek}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue placeholder="Filter Aspek" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Aspek</SelectItem>
+                  {ASPEK_CPL_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Table */}
+            <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-24">Kode</TableHead>
                     <TableHead className="w-28">Aspek</TableHead>
-                    <TableHead>Nama Bahan Kajian</TableHead>
-                    <TableHead className="w-48">Ranah Keilmuan</TableHead>
+                    <TableHead>Deskripsi CPL</TableHead>
                     <TableHead className="w-24 text-right">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredBK.length === 0 ? (
+                  {filteredCPL.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8">
+                      <TableCell colSpan={4} className="text-center py-8">
                         <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                          <Icons.Layers size={40} className="opacity-50" />
-                          <p>Tidak ada data bahan kajian</p>
+                          <Icons.Target size={40} className="opacity-50" />
+                          <p>Tidak ada data CPL</p>
                         </div>
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredBK.map((bk) => (
-                      <TableRow key={bk.id_bahan_kajian}>
+                    filteredCPL.map((cpl) => (
+                      <TableRow key={cpl.id_cpl}>
                         <TableCell>
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-800">
-                            {bk.kode_bk}
+                            {cpl.kode_cpl}
                           </span>
                         </TableCell>
                         <TableCell>
-                          <AspekBadge aspek={bk.aspek} />
+                          <AspekBadge aspek={cpl.aspek} />
                         </TableCell>
                         <TableCell className="font-medium">
-                          {bk.nama_bahan_kajian}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {bk.ranah_keilmuan}
+                          {cpl.deskripsi_cpl}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center justify-end gap-1">
@@ -375,7 +338,7 @@ export default function BahanKajianPage() {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8"
-                              onClick={() => openDialog(bk)}
+                              onClick={() => openDialog(cpl)}
                             >
                               <Icons.Edit size={14} />
                             </Button>
@@ -384,7 +347,7 @@ export default function BahanKajianPage() {
                               size="icon"
                               className="h-8 w-8 text-destructive hover:text-destructive"
                               onClick={() => {
-                                setDeletingBK(bk);
+                                setDeletingCPL(cpl);
                                 setIsDeleteDialogOpen(true);
                               }}
                             >
@@ -399,19 +362,18 @@ export default function BahanKajianPage() {
               </Table>
             </CardContent>
           </Card>
-        </>
       )}
 
-      {/* Matrix CPL-BK Tab */}
+      {/* Matrix CPL-PL Tab */}
       {activeTab === "matrix" && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Icons.Grid3X3 size={20} />
-              Matrix CPL - Bahan Kajian
+              Matrix CPL - Profil Lulusan
             </CardTitle>
             <CardDescription>
-              Klik pada sel untuk menghubungkan CPL dengan Bahan Kajian
+              Klik pada sel untuk menghubungkan CPL dengan Profil Lulusan
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -419,17 +381,19 @@ export default function BahanKajianPage() {
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-gray-50">
-                    <th className="sticky left-0 bg-gray-50 z-20 px-4 py-3 border-b border-r text-left text-sm font-semibold text-gray-900 min-w-48">
+                    <th className="sticky left-0 bg-gray-50 z-20 px-4 py-3 border-b border-r text-left text-sm font-semibold text-gray-900 min-w-60">
                       CPL
                     </th>
-                    {bkList.map((bk) => (
+                    {profilLulusanList.map((pl) => (
                       <th
-                        key={bk.id_bahan_kajian}
-                        className="px-3 py-3 border-b text-center text-sm font-semibold text-gray-900 min-w-20"
+                        key={pl.id_profil}
+                        className="px-3 py-3 border-b text-center text-sm font-semibold text-gray-900 min-w-24"
                       >
                         <div className="flex flex-col items-center gap-1">
-                          <span>{bk.kode_bk}</span>
-                          <AspekBadge aspek={bk.aspek} />
+                          <span>{pl.kode_profil}</span>
+                          <span className="text-xs font-normal text-muted-foreground truncate max-w-20" title={pl.profil_lulusan}>
+                            {pl.profil_lulusan}
+                          </span>
                         </div>
                       </th>
                     ))}
@@ -448,24 +412,24 @@ export default function BahanKajianPage() {
                           </span>
                           <AspekBadge aspek={cpl.aspek} />
                         </div>
-                        <span className="text-muted-foreground text-xs line-clamp-1 max-w-40 mt-1" title={cpl.deskripsi_cpl}>
+                        <span className="text-muted-foreground text-xs line-clamp-1 max-w-48 mt-1" title={cpl.deskripsi_cpl}>
                           {cpl.deskripsi_cpl}
                         </span>
                       </td>
-                      {bkList.map((bk) => (
+                      {profilLulusanList.map((pl) => (
                         <td
-                          key={bk.id_bahan_kajian}
+                          key={pl.id_profil}
                           className="px-3 py-3 border-b text-center"
                         >
                           <button
-                            onClick={() => toggleMapping(cpl.id_cpl, bk.id_bahan_kajian)}
+                            onClick={() => toggleMapping(cpl.id_cpl, pl.id_profil)}
                             className={`w-8 h-8 rounded-md border-2 transition-all flex items-center justify-center ${
-                              hasMapping(cpl.id_cpl, bk.id_bahan_kajian)
+                              hasMapping(cpl.id_cpl, pl.id_profil)
                                 ? "bg-green-500 border-green-600 text-white"
                                 : "bg-white border-gray-300 hover:border-gray-400"
                             }`}
                           >
-                            {hasMapping(cpl.id_cpl, bk.id_bahan_kajian) && (
+                            {hasMapping(cpl.id_cpl, pl.id_profil) && (
                               <Icons.Check size={16} />
                             )}
                           </button>
@@ -479,11 +443,11 @@ export default function BahanKajianPage() {
                   {/* Total Row */}
                   <tr className="bg-gray-100 font-semibold">
                     <td className="sticky left-0 bg-gray-100 z-10 px-4 py-3 border-t-2">
-                      Total CPL per BK
+                      Total CPL per PL
                     </td>
-                    {bkList.map((bk) => (
-                      <td key={bk.id_bahan_kajian} className="px-3 py-3 border-t-2 text-center">
-                        {countBKMappings(bk.id_bahan_kajian)}
+                    {profilLulusanList.map((pl) => (
+                      <td key={pl.id_profil} className="px-3 py-3 border-t-2 text-center">
+                        {countPLMappings(pl.id_profil)}
                       </td>
                     ))}
                     <td className="px-3 py-3 border-t-2 border-l text-center">
@@ -501,9 +465,9 @@ export default function BahanKajianPage() {
                 <div className="text-sm text-blue-800">
                   <p className="font-medium">Petunjuk Pengisian Matrix</p>
                   <ul className="mt-1 list-disc list-inside space-y-1">
-                    <li>Klik pada sel untuk menandai/menghapus relasi antara CPL dan Bahan Kajian</li>
-                    <li>Kolom Total menunjukkan jumlah BK yang terhubung dengan CPL tersebut</li>
-                    <li>Baris Total menunjukkan jumlah CPL yang didukung oleh setiap Bahan Kajian</li>
+                    <li>Klik pada sel untuk menandai/menghapus relasi antara CPL dan Profil Lulusan</li>
+                    <li>Kolom Total menunjukkan jumlah PL yang terhubung dengan CPL tersebut</li>
+                    <li>Baris Total menunjukkan jumlah CPL yang mendukung setiap Profil Lulusan</li>
                   </ul>
                 </div>
               </div>
@@ -517,44 +481,35 @@ export default function BahanKajianPage() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              {editingBK ? "Edit Bahan Kajian" : "Tambah Bahan Kajian Baru"}
+              {editingCPL ? "Edit CPL" : "Tambah CPL Baru"}
             </DialogTitle>
             <DialogDescription>
-              {editingBK
-                ? "Ubah informasi bahan kajian yang sudah ada"
-                : "Tambahkan bahan kajian baru ke dalam kurikulum"}
+              {editingCPL
+                ? "Ubah informasi Capaian Pembelajaran Lulusan"
+                : "Tambahkan CPL baru ke dalam kurikulum"}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="kode_bk">Kode BK</Label>
-                <Input
-                  id="kode_bk"
-                  placeholder="BK-01"
-                  value={formData.kode_bk}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      kode_bk: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="aspek">Aspek (sesuai KUL)</Label>
+                <Label htmlFor="aspek">Aspek</Label>
                 <Select
                   value={formData.aspek}
-                  onValueChange={(value) =>
-                    setFormData((prev) => ({ ...prev, aspek: value as AspekKUL }))
-                  }
+                  onValueChange={(value) => {
+                    const aspek = value as AspekCPL;
+                    setFormData((prev) => ({
+                      ...prev,
+                      aspek,
+                      kode_cpl: editingCPL ? prev.kode_cpl : generateKode(aspek),
+                    }));
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Pilih aspek" />
                   </SelectTrigger>
                   <SelectContent>
-                    {ASPEK_KUL_OPTIONS.map((opt) => (
+                    {ASPEK_CPL_OPTIONS.map((opt) => (
                       <SelectItem key={opt.value} value={opt.value}>
                         {opt.label}
                       </SelectItem>
@@ -562,39 +517,36 @@ export default function BahanKajianPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="kode_cpl">Kode CPL</Label>
+                <Input
+                  id="kode_cpl"
+                  placeholder="S1, P1, KU1, KK1"
+                  value={formData.kode_cpl}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      kode_cpl: e.target.value,
+                    }))
+                  }
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="nama_bahan_kajian">Nama Bahan Kajian</Label>
-              <Input
-                id="nama_bahan_kajian"
-                placeholder="Contoh: Algoritma dan Pemrograman"
-                value={formData.nama_bahan_kajian}
+              <Label htmlFor="deskripsi_cpl">Deskripsi CPL</Label>
+              <Textarea
+                id="deskripsi_cpl"
+                placeholder="Deskripsi capaian pembelajaran lulusan..."
+                rows={4}
+                value={formData.deskripsi_cpl}
                 onChange={(e) =>
                   setFormData((prev) => ({
                     ...prev,
-                    nama_bahan_kajian: e.target.value,
+                    deskripsi_cpl: e.target.value,
                   }))
                 }
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="ranah_keilmuan">Ranah Keilmuan</Label>
-              <Input
-                id="ranah_keilmuan"
-                placeholder="Contoh: Ilmu Komputer Dasar, Sistem Informasi, dll"
-                value={formData.ranah_keilmuan}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    ranah_keilmuan: e.target.value,
-                  }))
-                }
-              />
-              <p className="text-xs text-muted-foreground">
-                Masukkan ranah keilmuan sesuai dengan bidang ilmu yang relevan
-              </p>
             </div>
           </div>
 
@@ -604,9 +556,9 @@ export default function BahanKajianPage() {
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={!formData.kode_bk.trim() || !formData.nama_bahan_kajian.trim() || !formData.ranah_keilmuan.trim()}
+              disabled={!formData.kode_cpl.trim() || !formData.deskripsi_cpl.trim()}
             >
-              {editingBK ? "Simpan Perubahan" : "Tambah"}
+              {editingCPL ? "Simpan Perubahan" : "Tambah"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -616,9 +568,9 @@ export default function BahanKajianPage() {
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Hapus Bahan Kajian</DialogTitle>
+            <DialogTitle>Hapus CPL</DialogTitle>
             <DialogDescription>
-              Apakah Anda yakin ingin menghapus bahan kajian "{deletingBK?.nama_bahan_kajian}"? Tindakan ini tidak dapat dibatalkan.
+              Apakah Anda yakin ingin menghapus CPL "{deletingCPL?.kode_cpl}"? Tindakan ini tidak dapat dibatalkan.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

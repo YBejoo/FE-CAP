@@ -1,39 +1,48 @@
-import type { KompetensiUtamaLulusan, KompetensiUtamaLulusanForm } from "~/types";
-import { dummyKompetensiUtamaLulusan } from "~/data/dummy-data";
+import api from "~/lib/api";
+import type { ApiResponse, KompetensiUtamaLulusan, KompetensiUtamaLulusanForm, AspekKUL } from "~/types";
+import { toDate, unwrapResponse } from "~/services/utils";
 
-// Using dummy data for now
-let kulData = [...dummyKompetensiUtamaLulusan];
+type BackendKul = {
+  id: string;
+  kode_kul: string;
+  kompetensi_lulusan: string;
+  aspek: AspekKUL;
+  id_kurikulum: string;
+  created_at?: string | number | Date | null;
+  updated_at?: string | number | Date | null;
+};
 
-export async function fetchKulList(): Promise<KompetensiUtamaLulusan[]> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  return [...kulData];
+const mapKul = (item: BackendKul): KompetensiUtamaLulusan => ({
+  id_kul: item.id,
+  kode_kul: item.kode_kul,
+  kompetensi_lulusan: item.kompetensi_lulusan,
+  aspek: item.aspek,
+  id_kurikulum: item.id_kurikulum,
+  created_at: toDate(item.created_at),
+  updated_at: toDate(item.updated_at),
+});
+
+export async function fetchKulList(params?: { id_kurikulum?: string }): Promise<KompetensiUtamaLulusan[]> {
+  const queryParams: any = {};
+  if (params?.id_kurikulum) queryParams.id_kurikulum = params.id_kurikulum;
+  
+  const { data } = await api.get<ApiResponse<BackendKul[]>>("/kul", {
+    params: Object.keys(queryParams).length > 0 ? queryParams : undefined,
+  });
+  const items = unwrapResponse(data) ?? [];
+  return items.map(mapKul);
 }
 
 export async function createKul(payload: KompetensiUtamaLulusanForm): Promise<KompetensiUtamaLulusan> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  const newKul: KompetensiUtamaLulusan = {
-    id_kul: `kul-${Date.now()}`,
-    ...payload,
-    created_at: new Date(),
-    updated_at: new Date(),
-  };
-  kulData.push(newKul);
-  return newKul;
+  const { data } = await api.post<ApiResponse<BackendKul>>("/kul", payload);
+  return mapKul(unwrapResponse(data));
 }
 
 export async function updateKul(id: string, payload: Partial<KompetensiUtamaLulusanForm>): Promise<KompetensiUtamaLulusan> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  const index = kulData.findIndex((k) => k.id_kul === id);
-  if (index === -1) throw new Error("KUL not found");
-  kulData[index] = {
-    ...kulData[index],
-    ...payload,
-    updated_at: new Date(),
-  };
-  return kulData[index];
+  const { data } = await api.put<ApiResponse<BackendKul>>(`/kul/${id}`, payload);
+  return mapKul(unwrapResponse(data));
 }
 
 export async function deleteKul(id: string): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  kulData = kulData.filter((k) => k.id_kul !== id);
+  await api.delete(`/kul/${id}`);
 }
