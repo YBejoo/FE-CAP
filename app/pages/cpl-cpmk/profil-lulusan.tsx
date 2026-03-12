@@ -24,45 +24,17 @@ import {
   TableRow,
 } from "~/components/ui";
 import type { ProfilLulusan } from "~/types";
+import { useProfilLulusan } from "~/hooks/useProfilLulusan";
 
-// Dummy Profil Lulusan data sesuai struktur baru (Kode, Profil Lulusan, Deskripsi, Sumber)
-const initialProfilLulusan: ProfilLulusan[] = [
-  {
-    id_profil: "1",
-    kode_profil: "PL-01",
-    profil_lulusan: "Software Engineer",
-    deskripsi: "Mampu merancang, mengembangkan, dan memelihara sistem perangkat lunak yang efisien dan berkualitas tinggi sesuai dengan kebutuhan industri.",
-    sumber: "KKNI Level 6, Asosiasi Profesi Informatika Indonesia",
-    id_kurikulum: "1",
-  },
-  {
-    id_profil: "2",
-    kode_profil: "PL-02",
-    profil_lulusan: "Data Analyst",
-    deskripsi: "Mampu mengolah, menganalisis, dan menginterpretasi data untuk mendukung pengambilan keputusan bisnis secara akurat dan efektif.",
-    sumber: "KKNI Level 6, Standar Kompetensi Data Science",
-    id_kurikulum: "1",
-  },
-  {
-    id_profil: "3",
-    kode_profil: "PL-03",
-    profil_lulusan: "IT Consultant",
-    deskripsi: "Mampu memberikan solusi teknologi informasi yang tepat sesuai kebutuhan organisasi dan mampu berkomunikasi dengan pemangku kepentingan.",
-    sumber: "KKNI Level 6, Standar Kompetensi Konsultan IT",
-    id_kurikulum: "1",
-  },
-  {
-    id_profil: "4",
-    kode_profil: "PL-04",
-    profil_lulusan: "System Administrator",
-    deskripsi: "Mampu mengelola, memelihara, dan mengamankan infrastruktur sistem informasi dalam organisasi.",
-    sumber: "KKNI Level 6, CompTIA Standards",
-    id_kurikulum: "1",
-  },
-];
 
 export default function ProfilLulusanPage() {
-  const [profilList, setProfilList] = useState<ProfilLulusan[]>(initialProfilLulusan);
+  const {
+    profilList,
+    loading,
+    createProfil,
+    updateProfil,
+    deleteProfil,
+  } = useProfilLulusan();
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProfil, setEditingProfil] = useState<ProfilLulusan | null>(null);
@@ -86,32 +58,30 @@ export default function ProfilLulusanPage() {
   );
 
   // Handle form submit
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (editingProfil) {
-      setProfilList((prev) =>
-        prev.map((p) =>
-          p.id_profil === editingProfil.id_profil
-            ? { ...p, ...formData }
-            : p
-        )
-      );
+      await updateProfil(editingProfil.id_profil, {
+        kode_profil: formData.kode_profil,
+        profil_lulusan: formData.profil_lulusan,
+        deskripsi: formData.deskripsi,
+        sumber: formData.sumber,
+      });
     } else {
-      const newProfil: ProfilLulusan = {
-        id_profil: Date.now().toString(),
-        ...formData,
+      await createProfil({
+        kode_profil: formData.kode_profil,
+        profil_lulusan: formData.profil_lulusan,
+        deskripsi: formData.deskripsi,
+        sumber: formData.sumber,
         id_kurikulum: "1",
-      };
-      setProfilList((prev) => [...prev, newProfil]);
+      });
     }
     handleCloseDialog();
   };
 
   // Handle delete
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deletingProfil) {
-      setProfilList((prev) =>
-        prev.filter((p) => p.id_profil !== deletingProfil.id_profil)
-      );
+      await deleteProfil(deletingProfil.id_profil);
       setIsDeleteDialogOpen(false);
       setDeletingProfil(null);
     }
@@ -152,37 +122,29 @@ export default function ProfilLulusanPage() {
     });
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <Icons.Loader className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Header Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Profil</p>
-                <p className="text-2xl font-bold">{profilList.length}</p>
-              </div>
-              <Icons.GraduationCap className="h-8 w-8 text-muted-foreground/50" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Kurikulum Aktif</p>
-                <p className="text-2xl font-bold">2024</p>
-              </div>
-              <Icons.BookOpen className="h-8 w-8 text-muted-foreground/50" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Action Bar */}
+      {/* Single Card: Search & Table */}
       <Card>
-        <CardContent className="p-4">
+        <CardHeader>
+          <CardTitle>Daftar Profil Lulusan</CardTitle>
+          <CardDescription>
+            Total {filteredProfil.length} profil lulusan ditemukan
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Search & Button Bar */}
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
             <div className="relative flex-1 max-w-sm">
               <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -198,18 +160,8 @@ export default function ProfilLulusanPage() {
               Tambah Profil Lulusan
             </Button>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Daftar Profil Lulusan</CardTitle>
-          <CardDescription>
-            Total {filteredProfil.length} profil lulusan ditemukan
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+          {/* Table */}
           <Table>
             <TableHeader>
               <TableRow>

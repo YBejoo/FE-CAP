@@ -1,7 +1,16 @@
-import { useLocation } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { NAV_ITEMS } from "~/lib/constants";
 import { Icons } from "~/components/ui/icons";
 import { useSidebar } from "~/contexts/sidebar-context";
+import { useAuth } from "~/contexts/auth-context";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuLabel, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from "~/components/ui/dropdown-menu";
 
 interface HeaderProps {
   title?: string;
@@ -9,7 +18,24 @@ interface HeaderProps {
 
 export function Header({ title }: HeaderProps) {
   const location = useLocation();
+  const navigate = useNavigate();
   const { isCollapsed, toggle } = useSidebar();
+  const { user, logout } = useAuth();
+
+  // Get user initials
+  const getUserInitials = () => {
+    if (!user?.nama) return "?";
+    const names = user.nama.split(" ");
+    if (names.length >= 2) {
+      return `${names[0][0]}${names[1][0]}`.toUpperCase();
+    }
+    return names[0][0].toUpperCase();
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login");
+  };
 
   // Generate breadcrumb from current path
   const getBreadcrumb = () => {
@@ -100,20 +126,53 @@ export function Header({ title }: HeaderProps) {
         <div className="w-px h-8 bg-slate-200 dark:bg-slate-700 mx-1"></div>
 
         {/* User Profile */}
-        <button className="
-          flex items-center gap-3 p-1.5 pr-3 rounded-lg
-          hover:bg-slate-100 dark:hover:bg-slate-800
-          transition-colors
-        ">
-          <div className="w-8 h-8 rounded-full bg-linear-to-br from-blue-400 to-blue-600 flex items-center justify-center">
-            <span className="text-white text-sm font-medium">A</span>
-          </div>
-          <div className="hidden sm:block text-left">
-            <p className="text-sm font-medium text-slate-900 dark:text-white">Admin</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Administrator</p>
-          </div>
-          <Icons.ChevronDown size={16} className="hidden sm:block text-slate-400" />
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="
+              flex items-center gap-3 p-1.5 pr-3 rounded-lg
+              hover:bg-slate-100 dark:hover:bg-slate-800
+              transition-colors
+            ">
+              <div className="w-8 h-8 rounded-full bg-linear-to-br from-blue-400 to-blue-600 flex items-center justify-center">
+                <span className="text-white text-sm font-medium">{getUserInitials()}</span>
+              </div>
+              <div className="hidden sm:block text-left">
+                <p className="text-sm font-medium text-slate-900 dark:text-white">
+                  {user?.nama || "User"}
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {user?.role || "User"}
+                </p>
+              </div>
+              <Icons.ChevronDown size={16} className="hidden sm:block text-slate-400" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium">{user?.nama}</p>
+                <p className="text-xs text-slate-500">{user?.email}</p>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>
+              <Icons.User className="mr-2 h-4 w-4" />
+              <span>Profile</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <Icons.Settings className="mr-2 h-4 w-4" />
+              <span>Pengaturan</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem 
+              onClick={handleLogout}
+              className="text-red-600 focus:text-red-600 focus:bg-red-50"
+            >
+              <Icons.LogOut className="mr-2 h-4 w-4" />
+              <span>Logout</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

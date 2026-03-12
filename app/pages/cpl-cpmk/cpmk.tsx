@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Card,
   CardContent,
@@ -24,84 +24,111 @@ import {
   SelectValue,
 } from "~/components/ui";
 import type { CPMK, SubCPMK, MataKuliah, CPL } from "~/types";
+import { useCpmk } from "~/hooks/useCpmk";
+import { useMataKuliah } from "~/hooks/useMataKuliah";
+import { useCpl } from "~/hooks/useCpl";
 
-// Dummy data
-const dummyMataKuliah: MataKuliah[] = [
-  { kode_mk: "INF301", nama_mk: "Pemrograman Web", sks: 3, semester: 4, sifat: "Wajib", id_kurikulum: "1" },
-  { kode_mk: "INF302", nama_mk: "Jaringan Komputer", sks: 3, semester: 4, sifat: "Wajib", id_kurikulum: "1" },
-  { kode_mk: "INF401", nama_mk: "Keamanan Sistem", sks: 3, semester: 5, sifat: "Pilihan", id_kurikulum: "1" },
-];
-
-const dummyCPLs: CPL[] = [
-  { id_cpl: "1", kode_cpl: "P1", aspek: "Pengetahuan", deskripsi_cpl: "Menguasai konsep teoritis bidang TI", id_kurikulum: "1" },
-  { id_cpl: "2", kode_cpl: "P2", aspek: "Pengetahuan", deskripsi_cpl: "Menguasai prinsip rekayasa perangkat lunak", id_kurikulum: "1" },
-  { id_cpl: "3", kode_cpl: "KK1", aspek: "Keterampilan Khusus", deskripsi_cpl: "Mampu merancang sistem informasi", id_kurikulum: "1" },
-  { id_cpl: "4", kode_cpl: "KK2", aspek: "Keterampilan Khusus", deskripsi_cpl: "Mampu mengembangkan aplikasi", id_kurikulum: "1" },
-];
-
-const initialCPMK: CPMK[] = [
-  { id_cpmk: "1", kode_cpmk: "M1", deskripsi_cpmk: "Mampu menjelaskan dasar-dasar pemrograman web", bobot_persentase: 30, kode_mk: "INF301", id_cpl: "1" },
-  { id_cpmk: "2", kode_cpmk: "M2", deskripsi_cpmk: "Mampu menerapkan konsep HTML, CSS, dan JavaScript", bobot_persentase: 40, kode_mk: "INF301", id_cpl: "3" },
-  { id_cpmk: "3", kode_cpmk: "M3", deskripsi_cpmk: "Mampu mengembangkan aplikasi web interaktif", bobot_persentase: 30, kode_mk: "INF301", id_cpl: "4" },
-  { id_cpmk: "4", kode_cpmk: "N1", deskripsi_cpmk: "Mampu menjelaskan konsep jaringan komputer", bobot_persentase: 35, kode_mk: "INF302", id_cpl: "1" },
-  { id_cpmk: "5", kode_cpmk: "N2", deskripsi_cpmk: "Mampu mengkonfigurasi jaringan dasar", bobot_persentase: 65, kode_mk: "INF302", id_cpl: "3" },
-];
-
-const initialSubCPMK: SubCPMK[] = [
-  { id_sub_cpmk: "1", kode_sub: "M1.1", deskripsi_sub_cpmk: "Memahami konsep HTTP dan protokol web", indikator: "Mahasiswa dapat menjelaskan cara kerja HTTP", kriteria_penilaian: "Tes tertulis", id_cpmk: "1" },
-  { id_sub_cpmk: "2", kode_sub: "M1.2", deskripsi_sub_cpmk: "Memahami arsitektur client-server", indikator: "Mahasiswa dapat menggambarkan arsitektur web", kriteria_penilaian: "Tes tertulis", id_cpmk: "1" },
-  { id_sub_cpmk: "3", kode_sub: "M2.1", deskripsi_sub_cpmk: "Menerapkan struktur HTML5", indikator: "Mahasiswa dapat membuat halaman HTML semantik", kriteria_penilaian: "Praktikum", id_cpmk: "2" },
-  { id_sub_cpmk: "4", kode_sub: "M2.2", deskripsi_sub_cpmk: "Menerapkan styling CSS", indikator: "Mahasiswa dapat mendesain tampilan responsif", kriteria_penilaian: "Praktikum", id_cpmk: "2" },
-  { id_sub_cpmk: "5", kode_sub: "M2.3", deskripsi_sub_cpmk: "Menerapkan JavaScript interaktif", indikator: "Mahasiswa dapat membuat fitur interaktif", kriteria_penilaian: "Praktikum", id_cpmk: "2" },
-];
 
 export default function CPMKManagementPage() {
-  const [cpmkList, setCPMKList] = useState<CPMK[]>(initialCPMK);
-  const [subCpmkList, setSubCpmkList] = useState<SubCPMK[]>(initialSubCPMK);
-  const [selectedMK, setSelectedMK] = useState<string>("INF301");
+  const {
+    cpmkList,
+    subCpmkList,
+    loading,
+    createCpmk,
+    updateCpmk,
+    deleteCpmk,
+    createSubCpmk,
+    updateSubCpmk,
+    deleteSubCpmk,
+  } = useCpmk();
+  const { mataKuliahList, loading: mkLoading } = useMataKuliah();
+  const { cplList, loading: cplLoading } = useCpl();
+  const [selectedMK, setSelectedMK] = useState<string>("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubDialogOpen, setIsSubDialogOpen] = useState(false);
   const [editingCPMK, setEditingCPMK] = useState<CPMK | null>(null);
   const [editingSubCPMK, setEditingSubCPMK] = useState<SubCPMK | null>(null);
   const [expandedCPMK, setExpandedCPMK] = useState<string[]>([]);
 
-  const filteredCPMK = cpmkList.filter((c) => c.kode_mk === selectedMK);
+  useEffect(() => {
+    if (!selectedMK && mataKuliahList.length > 0) {
+      setSelectedMK(mataKuliahList[0].kode_mk);
+    }
+  }, [mataKuliahList, selectedMK]);
+
+  const effectiveCpmkList = useMemo(() => {
+    return cpmkList.map((item) => {
+      if (item.kode_mk) return item;
+      if (!item.id_mk) return item;
+      const mk = mataKuliahList.find((m) => m.id_mk === item.id_mk);
+      return { ...item, kode_mk: mk?.kode_mk ?? "" };
+    });
+  }, [cpmkList, mataKuliahList]);
+
+  const filteredCPMK = effectiveCpmkList.filter((c) => c.kode_mk === selectedMK);
   const totalBobot = filteredCPMK.reduce((sum, c) => sum + c.bobot_persentase, 0);
 
-  const handleSaveCPMK = () => {
+  const handleSaveCPMK = async () => {
     if (!editingCPMK) return;
 
-    if (editingCPMK.id_cpmk && cpmkList.find((c) => c.id_cpmk === editingCPMK.id_cpmk)) {
-      setCPMKList(cpmkList.map((c) => (c.id_cpmk === editingCPMK.id_cpmk ? editingCPMK : c)));
+    if (editingCPMK.id_cpmk && effectiveCpmkList.find((c) => c.id_cpmk === editingCPMK.id_cpmk)) {
+      await updateCpmk(editingCPMK.id_cpmk, {
+        kode_cpmk: editingCPMK.kode_cpmk,
+        deskripsi_cpmk: editingCPMK.deskripsi_cpmk,
+        bobot_persentase: editingCPMK.bobot_persentase,
+        kode_mk: selectedMK,
+        id_mk: mataKuliahList.find((mk) => mk.kode_mk === selectedMK)?.id_mk,
+        id_cpl: editingCPMK.id_cpl,
+      });
     } else {
-      setCPMKList([...cpmkList, { ...editingCPMK, id_cpmk: Date.now().toString(), kode_mk: selectedMK }]);
+      await createCpmk({
+        kode_cpmk: editingCPMK.kode_cpmk,
+        deskripsi_cpmk: editingCPMK.deskripsi_cpmk,
+        bobot_persentase: editingCPMK.bobot_persentase,
+        kode_mk: selectedMK,
+        id_mk: mataKuliahList.find((mk) => mk.kode_mk === selectedMK)?.id_mk,
+        id_cpl: editingCPMK.id_cpl,
+      });
     }
     setIsDialogOpen(false);
     setEditingCPMK(null);
   };
 
-  const handleDeleteCPMK = (id: string) => {
+  const handleDeleteCPMK = async (id: string) => {
     if (confirm("Hapus CPMK ini? Sub-CPMK terkait juga akan terhapus.")) {
-      setCPMKList(cpmkList.filter((c) => c.id_cpmk !== id));
-      setSubCpmkList(subCpmkList.filter((s) => s.id_cpmk !== id));
+      await deleteCpmk(id);
     }
   };
 
-  const handleSaveSubCPMK = () => {
+  const handleSaveSubCPMK = async () => {
     if (!editingSubCPMK) return;
 
     if (editingSubCPMK.id_sub_cpmk && subCpmkList.find((s) => s.id_sub_cpmk === editingSubCPMK.id_sub_cpmk)) {
-      setSubCpmkList(subCpmkList.map((s) => (s.id_sub_cpmk === editingSubCPMK.id_sub_cpmk ? editingSubCPMK : s)));
+      await updateSubCpmk(editingSubCPMK.id_cpmk, editingSubCPMK.id_sub_cpmk, {
+        kode_sub: editingSubCPMK.kode_sub,
+        deskripsi_sub_cpmk: editingSubCPMK.deskripsi_sub_cpmk,
+        indikator: editingSubCPMK.indikator,
+        kriteria_penilaian: editingSubCPMK.kriteria_penilaian,
+        id_cpmk: editingSubCPMK.id_cpmk,
+      });
     } else {
-      setSubCpmkList([...subCpmkList, { ...editingSubCPMK, id_sub_cpmk: Date.now().toString() }]);
+      await createSubCpmk(editingSubCPMK.id_cpmk, {
+        kode_sub: editingSubCPMK.kode_sub,
+        deskripsi_sub_cpmk: editingSubCPMK.deskripsi_sub_cpmk,
+        indikator: editingSubCPMK.indikator,
+        kriteria_penilaian: editingSubCPMK.kriteria_penilaian,
+        id_cpmk: editingSubCPMK.id_cpmk,
+      });
     }
     setIsSubDialogOpen(false);
     setEditingSubCPMK(null);
   };
 
-  const handleDeleteSubCPMK = (id: string) => {
+  const handleDeleteSubCPMK = async (id: string) => {
+    const sub = subCpmkList.find((s) => s.id_sub_cpmk === id);
+    if (!sub) return;
     if (confirm("Hapus Sub-CPMK ini?")) {
-      setSubCpmkList(subCpmkList.filter((s) => s.id_sub_cpmk !== id));
+      await deleteSubCpmk(sub.id_cpmk, id);
     }
   };
 
@@ -111,7 +138,18 @@ export default function CPMKManagementPage() {
     );
   };
 
-  const currentMK = dummyMataKuliah.find((mk) => mk.kode_mk === selectedMK);
+  const currentMK = mataKuliahList.find((mk) => mk.kode_mk === selectedMK);
+
+  if (loading || mkLoading || cplLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <Icons.Loader className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -125,7 +163,7 @@ export default function CPMKManagementPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {dummyMataKuliah.map((mk) => (
+                  {mataKuliahList.map((mk) => (
                     <SelectItem key={mk.kode_mk} value={mk.kode_mk}>
                       {mk.kode_mk} - {mk.nama_mk}
                     </SelectItem>
@@ -241,7 +279,7 @@ export default function CPMKManagementPage() {
             </Card>
           ) : (
             filteredCPMK.map((cpmk) => {
-              const relatedCPL = dummyCPLs.find((c) => c.id_cpl === cpmk.id_cpl);
+              const relatedCPL = cplList.find((c) => c.id_cpl === cpmk.id_cpl);
               const subCpmks = subCpmkList.filter((s) => s.id_cpmk === cpmk.id_cpmk);
               const isExpanded = expandedCPMK.includes(cpmk.id_cpmk);
 
@@ -442,7 +480,7 @@ export default function CPMKManagementPage() {
                     <SelectValue placeholder="Pilih CPL" />
                   </SelectTrigger>
                   <SelectContent>
-                    {dummyCPLs.map((cpl) => (
+                    {cplList.map((cpl) => (
                       <SelectItem key={cpl.id_cpl} value={cpl.id_cpl}>
                         {cpl.kode_cpl} - {cpl.deskripsi_cpl.slice(0, 40)}...
                       </SelectItem>

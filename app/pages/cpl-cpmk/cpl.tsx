@@ -31,26 +31,9 @@ import {
 } from "~/components/ui";
 import type { CPL, AspekCPL, ProfilLulusan } from "~/types";
 import { ASPEK_CPL_OPTIONS } from "~/lib/constants";
+import { useCpl } from "~/hooks/useCpl";
+import { useProfilLulusan } from "~/hooks/useProfilLulusan";
 
-// Dummy CPL data sesuai struktur (Kode, Aspek sesuai KUL, Deskripsi)
-const initialCPLs: CPL[] = [
-  { id_cpl: "1", kode_cpl: "S1", aspek: "S", deskripsi_cpl: "Bertakwa kepada Tuhan YME dan mampu menunjukkan sikap religius dalam kehidupan sehari-hari", id_kurikulum: "1" },
-  { id_cpl: "2", kode_cpl: "S2", aspek: "S", deskripsi_cpl: "Menjunjung tinggi nilai kemanusiaan dalam menjalankan tugas berdasarkan agama, moral, dan etika", id_kurikulum: "1" },
-  { id_cpl: "3", kode_cpl: "P1", aspek: "P", deskripsi_cpl: "Menguasai konsep teoritis bidang teknologi informasi secara umum dan mendalam", id_kurikulum: "1" },
-  { id_cpl: "4", kode_cpl: "P2", aspek: "P", deskripsi_cpl: "Menguasai prinsip-prinsip rekayasa perangkat lunak dan metodologi pengembangan sistem", id_kurikulum: "1" },
-  { id_cpl: "5", kode_cpl: "KU1", aspek: "KU", deskripsi_cpl: "Mampu menerapkan pemikiran logis, kritis, sistematis, dan inovatif", id_kurikulum: "1" },
-  { id_cpl: "6", kode_cpl: "KU2", aspek: "KU", deskripsi_cpl: "Mampu menunjukkan kinerja mandiri, bermutu, dan terukur", id_kurikulum: "1" },
-  { id_cpl: "7", kode_cpl: "KK1", aspek: "KK", deskripsi_cpl: "Mampu merancang dan mengembangkan sistem informasi yang efisien", id_kurikulum: "1" },
-  { id_cpl: "8", kode_cpl: "KK2", aspek: "KK", deskripsi_cpl: "Mampu mengembangkan aplikasi berbasis web dan mobile dengan framework modern", id_kurikulum: "1" },
-];
-
-// Dummy Profil Lulusan
-const dummyProfilLulusan: ProfilLulusan[] = [
-  { id_profil: "1", kode_profil: "PL-01", profil_lulusan: "Software Engineer", deskripsi: "Pengembang perangkat lunak", sumber: "KKNI", id_kurikulum: "1" },
-  { id_profil: "2", kode_profil: "PL-02", profil_lulusan: "Data Analyst", deskripsi: "Analis data", sumber: "KKNI", id_kurikulum: "1" },
-  { id_profil: "3", kode_profil: "PL-03", profil_lulusan: "System Analyst", deskripsi: "Analis sistem", sumber: "KKNI", id_kurikulum: "1" },
-  { id_profil: "4", kode_profil: "PL-04", profil_lulusan: "IT Consultant", deskripsi: "Konsultan IT", sumber: "KKNI", id_kurikulum: "1" },
-];
 
 // Aspek Badge Component
 function AspekBadge({ aspek }: { aspek: AspekCPL }) {
@@ -76,8 +59,14 @@ function AspekBadge({ aspek }: { aspek: AspekCPL }) {
 }
 
 export default function CPLPage() {
-  const [cplList, setCplList] = useState<CPL[]>(initialCPLs);
-  const [profilLulusanList] = useState<ProfilLulusan[]>(dummyProfilLulusan);
+  const {
+    cplList,
+    loading,
+    createCpl,
+    updateCpl,
+    deleteCpl,
+  } = useCpl();
+  const { profilList: profilLulusanList } = useProfilLulusan();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterAspek, setFilterAspek] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -89,16 +78,7 @@ export default function CPLPage() {
   const [activeTab, setActiveTab] = useState<"list" | "matrix">("list");
   
   // Matrix CPL-PL mappings
-  const [matrixMappings, setMatrixMappings] = useState<Record<string, string[]>>({
-    "1": ["1", "2"],      // S1 -> PL-01, PL-02
-    "2": ["1", "3"],      // S2 -> PL-01, PL-03
-    "3": ["1", "2"],      // P1 -> PL-01, PL-02
-    "4": ["1", "3", "4"], // P2 -> PL-01, PL-03, PL-04
-    "5": ["1", "2", "4"], // KU1 -> PL-01, PL-02, PL-04
-    "6": ["1", "2", "3"], // KU2 -> PL-01, PL-02, PL-03
-    "7": ["1"],           // KK1 -> PL-01
-    "8": ["1", "2"],      // KK2 -> PL-01, PL-02
-  });
+  const [matrixMappings, setMatrixMappings] = useState<Record<string, string[]>>({});
 
   // Form state
   const [formData, setFormData] = useState({
@@ -124,32 +104,28 @@ export default function CPLPage() {
   }));
 
   // Handle form submit
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (editingCPL) {
-      setCplList((prev) =>
-        prev.map((c) =>
-          c.id_cpl === editingCPL.id_cpl
-            ? { ...c, kode_cpl: formData.kode_cpl, aspek: formData.aspek, deskripsi_cpl: formData.deskripsi_cpl }
-            : c
-        )
-      );
+      await updateCpl(editingCPL.id_cpl, {
+        kode_cpl: formData.kode_cpl,
+        aspek: formData.aspek,
+        deskripsi_cpl: formData.deskripsi_cpl,
+      });
     } else {
-      const newCPL: CPL = {
-        id_cpl: Date.now().toString(),
+      await createCpl({
         kode_cpl: formData.kode_cpl,
         aspek: formData.aspek,
         deskripsi_cpl: formData.deskripsi_cpl,
         id_kurikulum: "1",
-      };
-      setCplList((prev) => [...prev, newCPL]);
+      });
     }
     handleCloseDialog();
   };
 
   // Handle delete
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deletingCPL) {
-      setCplList((prev) => prev.filter((c) => c.id_cpl !== deletingCPL.id_cpl));
+      await deleteCpl(deletingCPL.id_cpl);
       setIsDeleteDialogOpen(false);
       setDeletingCPL(null);
     }
@@ -222,36 +198,19 @@ export default function CPLPage() {
     return Object.values(matrixMappings).filter((pls) => pls.includes(plId)).length;
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <Icons.Loader className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total CPL</p>
-                <p className="text-2xl font-bold">{cplList.length}</p>
-              </div>
-              <Icons.Target className="h-8 w-8 text-muted-foreground/50" />
-            </div>
-          </CardContent>
-        </Card>
-        {aspekStats.map((stat) => (
-          <Card key={stat.value}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">{stat.value}</p>
-                  <p className="text-2xl font-bold">{stat.count}</p>
-                </div>
-                <AspekBadge aspek={stat.value as AspekCPL} />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
       {/* Tab Navigation */}
       <Card>
         <CardContent className="p-4">
@@ -284,42 +243,16 @@ export default function CPLPage() {
 
       {/* CPL List Tab */}
       {activeTab === "list" && (
-        <>
-          {/* Action Bar */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-                <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full sm:w-auto">
-                  <div className="relative flex-1 max-w-sm">
-                    <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Cari CPL..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-9"
-                    />
-                  </div>
-                  <Select value={filterAspek} onValueChange={setFilterAspek}>
-                    <SelectTrigger className="w-full sm:w-48">
-                      <SelectValue placeholder="Filter Aspek" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Semua Aspek</SelectItem>
-                      {ASPEK_CPL_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Legend */}
-          <Card>
-            <CardContent className="p-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Daftar Capaian Pembelajaran Lulusan</CardTitle>
+            <CardDescription>
+              Total {filteredCPL.length} CPL ditemukan
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Legend */}
+            <div className="p-4 bg-gray-50 rounded-lg border">
               <div className="flex flex-wrap gap-4 items-center">
                 <span className="text-sm font-medium text-muted-foreground">Keterangan Aspek:</span>
                 <div className="flex flex-wrap gap-3">
@@ -337,19 +270,36 @@ export default function CPLPage() {
                   </span>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          {/* Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Daftar Capaian Pembelajaran Lulusan</CardTitle>
-              <CardDescription>
-                Total {filteredCPL.length} CPL ditemukan
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
+            {/* Search & Filter */}
+            <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full sm:w-auto">
+              <div className="relative flex-1 max-w-sm">
+                <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Cari CPL..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Select value={filterAspek} onValueChange={setFilterAspek}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue placeholder="Filter Aspek" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Aspek</SelectItem>
+                  {ASPEK_CPL_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Table */}
+            <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-24">Kode</TableHead>
@@ -412,7 +362,6 @@ export default function CPLPage() {
               </Table>
             </CardContent>
           </Card>
-        </>
       )}
 
       {/* Matrix CPL-PL Tab */}

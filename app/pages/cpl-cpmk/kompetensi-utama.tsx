@@ -31,66 +31,8 @@ import {
 } from "~/components/ui";
 import type { KompetensiUtamaLulusan, AspekKUL } from "~/types";
 import { ASPEK_KUL_OPTIONS } from "~/lib/constants";
+import { useKompetensiUtama } from "~/hooks/useKompetensiUtama";
 
-// Dummy KUL data sesuai struktur (Kode, Kompetensi Lulusan, Aspek)
-const initialKUL: KompetensiUtamaLulusan[] = [
-  {
-    id_kul: "1",
-    kode_kul: "S1",
-    kompetensi_lulusan: "Bertakwa kepada Tuhan Yang Maha Esa dan mampu menunjukkan sikap religius",
-    aspek: "S",
-    id_kurikulum: "1",
-  },
-  {
-    id_kul: "2",
-    kode_kul: "S2",
-    kompetensi_lulusan: "Menjunjung tinggi nilai kemanusiaan dalam menjalankan tugas berdasarkan agama, moral, dan etika",
-    aspek: "S",
-    id_kurikulum: "1",
-  },
-  {
-    id_kul: "3",
-    kode_kul: "P1",
-    kompetensi_lulusan: "Menguasai konsep teoretis bidang pengetahuan tertentu secara umum dan mendalam",
-    aspek: "P",
-    id_kurikulum: "1",
-  },
-  {
-    id_kul: "4",
-    kode_kul: "P2",
-    kompetensi_lulusan: "Menguasai prinsip dan teknik pemrograman serta mampu mengaplikasikannya",
-    aspek: "P",
-    id_kurikulum: "1",
-  },
-  {
-    id_kul: "5",
-    kode_kul: "KU1",
-    kompetensi_lulusan: "Mampu menerapkan pemikiran logis, kritis, sistematis, dan inovatif dalam pengembangan ilmu pengetahuan",
-    aspek: "KU",
-    id_kurikulum: "1",
-  },
-  {
-    id_kul: "6",
-    kode_kul: "KU2",
-    kompetensi_lulusan: "Mampu menunjukkan kinerja mandiri, bermutu, dan terukur",
-    aspek: "KU",
-    id_kurikulum: "1",
-  },
-  {
-    id_kul: "7",
-    kode_kul: "KK1",
-    kompetensi_lulusan: "Mampu merancang dan mengembangkan aplikasi berbasis komputer",
-    aspek: "KK",
-    id_kurikulum: "1",
-  },
-  {
-    id_kul: "8",
-    kode_kul: "KK2",
-    kompetensi_lulusan: "Mampu menganalisis kebutuhan sistem informasi dan merancang solusi teknologi",
-    aspek: "KK",
-    id_kurikulum: "1",
-  },
-];
 
 // Aspek Badge Component dengan warna sesuai kategori
 function AspekBadge({ aspek }: { aspek: AspekKUL }) {
@@ -116,7 +58,13 @@ function AspekBadge({ aspek }: { aspek: AspekKUL }) {
 }
 
 export default function KompetensiUtamaPage() {
-  const [kulList, setKulList] = useState<KompetensiUtamaLulusan[]>(initialKUL);
+  const {
+    kulList,
+    loading,
+    createKul,
+    updateKul,
+    deleteKul,
+  } = useKompetensiUtama();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterAspek, setFilterAspek] = useState<string>("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -148,32 +96,28 @@ export default function KompetensiUtamaPage() {
   }));
 
   // Handle form submit
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (editingKUL) {
-      setKulList((prev) =>
-        prev.map((k) =>
-          k.id_kul === editingKUL.id_kul
-            ? { ...k, kode_kul: formData.kode_kul, kompetensi_lulusan: formData.kompetensi_lulusan, aspek: formData.aspek }
-            : k
-        )
-      );
+      await updateKul(editingKUL.id_kul, {
+        kode_kul: formData.kode_kul,
+        kompetensi_lulusan: formData.kompetensi_lulusan,
+        aspek: formData.aspek,
+      });
     } else {
-      const newKUL: KompetensiUtamaLulusan = {
-        id_kul: Date.now().toString(),
+      await createKul({
         kode_kul: formData.kode_kul,
         kompetensi_lulusan: formData.kompetensi_lulusan,
         aspek: formData.aspek,
         id_kurikulum: "1",
-      };
-      setKulList((prev) => [...prev, newKUL]);
+      });
     }
     handleCloseDialog();
   };
 
   // Handle delete
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deletingKUL) {
-      setKulList((prev) => prev.filter((k) => k.id_kul !== deletingKUL.id_kul));
+      await deleteKul(deletingKUL.id_kul);
       setIsDeleteDialogOpen(false);
       setDeletingKUL(null);
     }
@@ -223,39 +167,50 @@ export default function KompetensiUtamaPage() {
     return newCode;
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <Icons.Loader className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Stats Cards */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total KUL</p>
-                <p className="text-2xl font-bold">{kulList.length}</p>
-              </div>
-              <Icons.Award className="h-8 w-8 text-muted-foreground/50" />
-            </div>
-          </CardContent>
-        </Card>
-        {aspekStats.map((stat) => (
-          <Card key={stat.value}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">{stat.value}</p>
-                  <p className="text-2xl font-bold">{stat.count}</p>
-                </div>
-                <AspekBadge aspek={stat.value as AspekKUL} />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Action Bar */}
+      {/* Single Card: Keterangan, Search & Table */}
       <Card>
-        <CardContent className="p-4">
+        <CardHeader>
+          <CardTitle>Daftar Kompetensi Utama Lulusan</CardTitle>
+          <CardDescription>
+            Total {filteredKUL.length} kompetensi utama lulusan ditemukan
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Legend */}
+          <div className="p-4 bg-gray-50 rounded-lg border">
+            <div className="flex flex-wrap gap-4 items-center">
+              <span className="text-sm font-medium text-muted-foreground">Keterangan Aspek:</span>
+              <div className="flex flex-wrap gap-3">
+                <span className="inline-flex items-center gap-1.5 text-sm">
+                  <AspekBadge aspek="S" /> Sikap
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-sm">
+                  <AspekBadge aspek="P" /> Pengetahuan
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-sm">
+                  <AspekBadge aspek="KU" /> Keterampilan Umum
+                </span>
+                <span className="inline-flex items-center gap-1.5 text-sm">
+                  <AspekBadge aspek="KK" /> Keterampilan Khusus
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Search & Filter Bar */}
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
             <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full sm:w-auto">
               <div className="relative flex-1 max-w-sm">
@@ -286,41 +241,8 @@ export default function KompetensiUtamaPage() {
               Tambah KUL
             </Button>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Legend */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-wrap gap-4 items-center">
-            <span className="text-sm font-medium text-muted-foreground">Keterangan Aspek:</span>
-            <div className="flex flex-wrap gap-3">
-              <span className="inline-flex items-center gap-1.5 text-sm">
-                <AspekBadge aspek="S" /> Sikap
-              </span>
-              <span className="inline-flex items-center gap-1.5 text-sm">
-                <AspekBadge aspek="P" /> Pengetahuan
-              </span>
-              <span className="inline-flex items-center gap-1.5 text-sm">
-                <AspekBadge aspek="KU" /> Keterampilan Umum
-              </span>
-              <span className="inline-flex items-center gap-1.5 text-sm">
-                <AspekBadge aspek="KK" /> Keterampilan Khusus
-              </span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Daftar Kompetensi Utama Lulusan</CardTitle>
-          <CardDescription>
-            Total {filteredKUL.length} kompetensi utama lulusan ditemukan
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+          {/* Table */}
           <Table>
             <TableHeader>
               <TableRow>
